@@ -23,7 +23,23 @@ DB = CLIENT.search_engine
 PAGE_SIZE = 20
 
 
-def get_boosting_stage(keyword, store_id,skip):
+def get_boosting_stage(keyword, store_id,skip,brand_id,category_id,group_id):
+    filtrer_query={}
+    if brand_id is not None:
+        filtrer_query['brand.id']=brand_id
+    if category_id is not None:
+        filtrer_query['category.id']=category_id
+    if group_id is not None:
+        filtrer_query['group_id']=group_id
+    booster={'Patanjali':5}
+    arr=[]
+    for key,value in booster.items():
+        arr.append({'text': {
+                            'query': key,
+                            'path': 'brand.name',
+                            'score': {'boost': {'value': value}}
+                       }})
+
     PIPELINE = [
            {"$search": {
                         'compound': {
@@ -34,14 +50,8 @@ def get_boosting_stage(keyword, store_id,skip):
                                     }
                             }
                         ],
-                        'should':[
-                        {'text': {
-                            'query': "Parle",
-                            'path': 'brand.name',
-                            'score': {'boost': {'value': 6}}
-                        }}
-                        ],
-                        # "minimumShouldMatch": 0,
+                        'should':arr,
+                        "minimumShouldMatch": 0,
                         }
 
                     }},
@@ -82,7 +92,9 @@ def get_boosting_stage(keyword, store_id,skip):
             '$match': {
                 'store.store_id': store_id
             }
-        }, {
+        },
+        {'$match':filtrer_query},
+         {
                         '$project': {
                             '_id': 0,
                         }},
@@ -141,7 +153,7 @@ def get_autocomplete_pipeline(search_term, skip, limit):
 
 
 @app.get("/search")
-def product_search(store_id: str, keyword: str, page: str):
+def product_search(store_id: str, keyword: str, page: str,brand_id:Optional[str]=None,category_id:Optional[str]=None,group_id:Optional[str]=None):
     """
     Product Search API, This will help to discover the relevant products
     """
@@ -149,28 +161,13 @@ def product_search(store_id: str, keyword: str, page: str):
     start_time = time.time()
     user_id = 1
     skip = (int(page) - 1) * PAGE_SIZE
-    pipe_line = get_boosting_stage(keyword,store_id,skip)
+    pipe_line = get_boosting_stage(keyword,store_id,skip,brand_id,category_id,group_id)
     
     ans=list(DB["search_products"].aggregate(pipe_line))
     end_time=time.time()
+    print(len(ans))
     print((end_time-start_time)*1000)
     return ans
-    # products = list(DB["search_products"].aggregate([
-
-
-    #                 {
-    #                     '$project': {
-    #                         '_id': 0,
-    #                     }},
-    #                 {"$skip": skip},
-    #                 {'$limit': PAGE_SIZE}
-    #                 ]))
-    # store_search_terms(user_id, keyword, products)
-    # et = time.time()
-
-    # elapsed_time = et - st
-    # print('Execution time:', elapsed_time, 'seconds')
-    # return products
 
 
 @ app.get("/autocomplete")
@@ -181,23 +178,27 @@ def search_autocomplete(search_term: str, page: str):
     user_id=1
     skip=(int(page) - 1) * PAGE_SIZE
     pipeline=get_autocomplete_pipeline(search_term, skip, PAGE_SIZE)
-    products=list(DB["product_groups"].aggregate(pipeline))
-    store_autocomplete_results(user_id, search_term, products)
+    products=list(DB["search_products"].aggregate(pipeline))
+    # store_autocomplete_results(user_id, search_term, products)
     return products
 
 
 @ app.get("/filter_category")
-def filter_product(group_id: Optional[str]=None, brand_id: Optional[str]=None,):
+def filter_product(category_name: Optional[str]=None, brand_name: Optional[str]=None,):
     filter_query={}
-    if group_id:
-        filter_query['group_id']=group_id
-    if brand_id:
-        filter_query['brand_id']=brand_id
-
-    result=list(DB["products"].aggregate([
+    if category_name:
+        filter_query['category.name']=category_name
+    if brand_name:
+        filter_query['brand.name']=brand_name
+    print(filter_query)
+    result=list(DB["search_products"].aggregate([
 
         {'$match': filter_query},
         {"$project": {"_id": 0}},
         {'$limit': PAGE_SIZE}
     ]))
     return result
+
+
+
+
