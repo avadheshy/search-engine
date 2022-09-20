@@ -3,6 +3,7 @@ from multiprocessing import managers
 from multiprocessing.sharedctypes import Value
 import os
 from io import StringIO
+from sqlite3.dbapi2 import _AggregateProtocol
 from fastapi import FastAPI, Body, HTTPException, status, Query, File, UploadFile
 from fastapi.responses import Response, JSONResponse
 from fastapi.encoders import jsonable_encoder
@@ -33,6 +34,7 @@ def get_boosting_stage(keyword, store_id,skip,brand_id,category_id,group_id):
         filtrer_query['group_id']=group_id
     booster={'Patanjali':5}
     arr=[]
+
     for key,value in booster.items():
         arr.append({'text': {
                             'query': key,
@@ -94,12 +96,12 @@ def get_boosting_stage(keyword, store_id,skip,brand_id,category_id,group_id):
             }
         },
         {'$match':filtrer_query},
-         {
-                        '$project': {
-                            '_id': 0,
-                        }},
-                    {"$skip": skip},
-                    {'$limit': PAGE_SIZE}
+         {'$project': {
+                '_id': 0,
+                }
+            },
+        {"$skip": skip},
+        {'$limit': PAGE_SIZE}
     ]
     return PIPELINE
 
@@ -184,19 +186,30 @@ def search_autocomplete(search_term: str, page: str):
 
 
 @ app.get("/filter_category")
-def filter_product(category_name: Optional[str]=None, brand_name: Optional[str]=None,):
+def filter_product(page:str,id:str,filters_for:str, brand_ids=list):
+    import ipdb; ipdb.set_trace()
+
     filter_query={}
-    if category_name:
-        filter_query['category.name']=category_name
-    if brand_name:
-        filter_query['brand.name']=brand_name
+    if brand_ids:
+        filter_query['brand.id']= {"$in": brand_ids}
+    elif filters_for=='cl1':
+        filter_query['$and']=[{'category_level.cat_level':'1'},{'category_level.cl1_id':id}]
+    elif filters_for=='cl2':
+        filter_query['$and']=[{'category_level.cat_level':'2'},{'category_level.cl2_id':id}]
+    elif filters_for=='cl3':
+        filter_query['$and']=[{'category_level.cat_level':'3'},{'category_level.cl3_id':id}]
+    elif filters_for=='cl4':
+        filter_query['$and']=[{'category_level.cat_level':'4'},{'category_level.cl4_id':id}]
     print(filter_query)
-    result=list(DB["search_products"].aggregate([
+    aggregation_pipeline = [
 
         {'$match': filter_query},
         {"$project": {"_id": 0}},
-        {'$limit': PAGE_SIZE}
-    ]))
+        
+    ]
+    aggregation_pipeline.append({"$sort": 'created_at'})
+    aggregation_pipeline.append({'$limit': PAGE_SIZE})
+    result=list(DB["my_data"].aggregate(aggregation_pipeline))
     return result
 
 
