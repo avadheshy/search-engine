@@ -1,9 +1,8 @@
-from calendar import day_abbr
+
 from multiprocessing import managers
 from multiprocessing.sharedctypes import Value
 import os
 from io import StringIO
-from sqlite3.dbapi2 import _AggregateProtocol
 from fastapi import FastAPI, Body, HTTPException, status, Query, File, UploadFile
 from fastapi.responses import Response, JSONResponse
 from fastapi.encoders import jsonable_encoder
@@ -186,28 +185,48 @@ def search_autocomplete(search_term: str, page: str):
 
 
 @ app.get("/filter_category")
-def filter_product(page:str,id:str,filters_for:str, brand_ids=list):
-    import ipdb; ipdb.set_trace()
-
+def filter_product(filters_for:str,page:str,filters_for_id:str,sort_by:Optional[str]=None,categories: list = Query(None),brandIds: list = Query(None)):
+    # import ipdb; ipdb.set_trace()
+    print('hello')
     filter_query={}
-    if brand_ids:
-        filter_query['brand.id']= {"$in": brand_ids}
+    if filters_for=='brand':
+        filter_query['brand.id']= filters_for_id
     elif filters_for=='cl1':
-        filter_query['$and']=[{'category_level.cat_level':'1'},{'category_level.cl1_id':id}]
+        filter_query['$and']=[{'category_level.cat_level':'1'},{'category_level.cl1_id':filters_for_id}]
     elif filters_for=='cl2':
-        filter_query['$and']=[{'category_level.cat_level':'2'},{'category_level.cl2_id':id}]
+        filter_query['$and']=[{'category_level.cat_level':'2'},{'category_level.cl2_id':filters_for_id}]
     elif filters_for=='cl3':
-        filter_query['$and']=[{'category_level.cat_level':'3'},{'category_level.cl3_id':id}]
+        filter_query['$and']=[{'category_level.cat_level':'3'},{'category_level.cl3_id':filters_for_id}]
     elif filters_for=='cl4':
-        filter_query['$and']=[{'category_level.cat_level':'4'},{'category_level.cl4_id':id}]
-    print(filter_query)
+        filter_query['$and']=[{'category_level.cat_level':'4'},{'category_level.cl4_id':filters_for_id}]
     aggregation_pipeline = [
 
         {'$match': filter_query},
         {"$project": {"_id": 0}},
         
     ]
-    aggregation_pipeline.append({"$sort": 'created_at'})
+    # aggregation_pipeline.append({"$sort": 'created_at'})
+    sort_query={}
+    category_ids=[]
+    brand_ids=[]
+    if sort_by:
+        if sort_by=='min_price':
+            sort_query['price']=1
+        elif sort_by=='max_price':
+            sort_query['price']=-1
+        aggregation_pipeline.append({'$sort':sort_query})
+    if categories:
+        for category in categories:
+            category_ids.append(category)
+        aggregation_pipeline.append({'$match':{'category.id':{'$in':category_ids}}})
+    if brandIds:
+        for brandId in brandIds:
+            brand_ids.append(brandId)
+        aggregation_pipeline.append({'$match':{'brand.id':{'$in':brand_ids}}})
+
+
+
+    print(aggregation_pipeline)    
     aggregation_pipeline.append({'$limit': PAGE_SIZE})
     result=list(DB["my_data"].aggregate(aggregation_pipeline))
     return result
