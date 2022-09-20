@@ -23,39 +23,19 @@ DB = CLIENT.search_engine
 PAGE_SIZE = 20
 
 
-def get_boosting_stage(keyword, store_id,skip,brand_id,category_id,group_id):
-    filtrer_query={}
-    if brand_id is not None:
-        filtrer_query['brand.id']=brand_id
-    if category_id is not None:
-        filtrer_query['category.id']=category_id
-    if group_id is not None:
-        filtrer_query['group_id']=group_id
-    booster={'Patanjali':5}
-    arr=[]
-
-    for key,value in booster.items():
-        arr.append({'text': {
-                            'query': key,
-                            'path': 'brand.name',
-                            'score': {'boost': {'value': value}}
-                       }})
+def get_boosting_stage(keyword, store_id,skip):
 
     PIPELINE = [
-           {"$search": {
-                        'compound': {
-                        'must': [
-                            {'text': {
-                            'query': keyword,
-                            'path': ['name', 'brand.name', 'category.name']
-                                    }
-                            }
-                        ],
-                        'should':arr,
-                        "minimumShouldMatch": 0,
-                        }
-
-                    }},
+            {
+        '$search': {
+            'text': {
+                'query': keyword, 
+                'path': [
+                    'name', 'brand.name', 'category.name'
+                ]
+            }
+        }
+        },
 
             {
             '$lookup': {
@@ -63,27 +43,28 @@ def get_boosting_stage(keyword, store_id,skip,brand_id,category_id,group_id):
                 'let': {
                     'product_id': '$id'
                 },
-                'pipeline': [
-                    {
-                        '$match': {
-                            '$expr': {
-                                '$and': [
-                                    {
-                                        '$eq': [
-                                            '$product_id', '$$product_id'
-                                        ]
-                                    }, {
-                                        '$eq': [
-                                            '$store_id', store_id
-                                        ]
+            'pipeline': [
+                {
+                    '$match': {
+                        '$expr': {
+                        '$and': [
+                            {
+                            '$eq': [
+                            '$product_id', '$$product_id'
+                            ]
+                            }, {
+                             '$eq': [
+                                 '$store_id', store_id
+                            ]
                                     }
-                                ]
+                        ]
                             }
                         }
-                    }, {
-                        '$project': {
-                            'store_id': 1,
-                            '_id': 0
+                    }, 
+            {
+                '$project': {
+                'store_id': 1,
+                '_id': 0
                         }
                     }
                 ],
@@ -94,7 +75,6 @@ def get_boosting_stage(keyword, store_id,skip,brand_id,category_id,group_id):
                 'store.store_id': store_id
             }
         },
-        {'$match':filtrer_query},
          {'$project': {
                 '_id': 0,
                 }
@@ -154,7 +134,7 @@ def get_autocomplete_pipeline(search_term, skip, limit):
 
 
 @app.get("/search")
-def product_search(store_id: str, keyword: str, page: str,brand_id:Optional[str]=None,category_id:Optional[str]=None,group_id:Optional[str]=None):
+def product_search(store_id: str,page: str,keyword:Optional[str] = None):
     """
     Product Search API, This will help to discover the relevant products
     """
@@ -162,7 +142,7 @@ def product_search(store_id: str, keyword: str, page: str,brand_id:Optional[str]
     start_time = time.time()
     user_id = 1
     skip = (int(page) - 1) * PAGE_SIZE
-    pipe_line = get_boosting_stage(keyword,store_id,skip,brand_id,category_id,group_id)
+    pipe_line = get_boosting_stage(keyword,store_id,skip)
     
     ans=list(DB["search_products"].aggregate(pipe_line))
     end_time=time.time()
@@ -187,7 +167,6 @@ def search_autocomplete(search_term: str, page: str):
 @ app.get("/filter_category")
 def filter_product(filters_for:str,page:str,filters_for_id:str,sort_by:Optional[str]=None,categories: list = Query(None),brandIds: list = Query(None)):
     # import ipdb; ipdb.set_trace()
-    print('hello')
     filter_query={}
     if filters_for=='brand':
         filter_query['brand.id']= filters_for_id
