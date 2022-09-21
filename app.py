@@ -162,7 +162,7 @@ def product_search(request: Request):
     'links':{
         'first':path + '?page=1',
         'last': path + '?page='+str(total_pages),
-        'prev':None,
+        'prev':None if int(page)-1==0 else 
         'next':None,
     },
     'meta':{
