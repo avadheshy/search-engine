@@ -16,6 +16,8 @@ from io import BytesIO
 import codecs
 
 
+
+
 app = FastAPI()
 CLIENT = MongoClient(
     'mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority')
@@ -134,24 +136,49 @@ def get_autocomplete_pipeline(search_term, skip, limit):
 
 
 @app.get("/search")
-def product_search(store_id: str,page: str,keyword:Optional[str] = None):
+def product_search(store_id: str,page: str,keyword:str):
     """
     Product Search API, This will help to discover the relevant products
     """
 
-    start_time = time.time()
     user_id = 1
     skip = (int(page) - 1) * PAGE_SIZE
     pipe_line = get_boosting_stage(keyword,store_id,skip)
     
     ans=list(DB["search_products"].aggregate(pipe_line))
-    end_time=time.time()
-    print(len(ans))
-    print((end_time-start_time)*1000)
-    return ans
+    result={
+    'data':{
+        'header_data':[],
+        'products':ans,
+    },
+    'links':{
+        'first':None,
+        'last':None,
+        'prev':None,
+        'next':None,
+    },
+    'meta':{
+    'current_page':page,
+    'from':1,
+    'last_page':int(page)-1,
+    'links':[
+        {
+        'url':None,
+        'label':1,
+        'active':True,
+        }
+    ],
+    'path':'',
+    'per_page':PAGE_SIZE,
+    'to':len(ans),
+    'total':len(ans)
+    }
+    }
+    
+    return result
 
 
-@ app.get("/autocomplete")
+@app.get("/autocomplete")
 def search_autocomplete(search_term: str, page: str):
     """
     This API helps to auto complete the searched term
@@ -165,35 +192,71 @@ def search_autocomplete(search_term: str, page: str):
 
 
 @ app.get("/filter_category")
-def filter_product(filters_for:str,page:str,filters_for_id:str,sort_by:Optional[str]=None,categories: list = Query(None),brandIds: list = Query(None)):
-    # import ipdb; ipdb.set_trace()
+def filter_product(filters_for:str,page:str,filters_for_id:str,storeid:str,sort_by:Optional[str]=None,categories: list = Query(None),brandIds: list = Query(None)):
     filter_query={}
     if filters_for=='brand':
         filter_query['brand.id']= filters_for_id
     elif filters_for=='cl1':
-        filter_query['$and']=[{'category_level.cat_level':'1'},{'category_level.cl1_id':filters_for_id}]
+        filter_query['category_level.cl1_id']=filters_for_id
     elif filters_for=='cl2':
-        filter_query['$and']=[{'category_level.cat_level':'2'},{'category_level.cl2_id':filters_for_id}]
+        filter_query['category_level.cl2_id'] = filters_for_id
     elif filters_for=='cl3':
-        filter_query['$and']=[{'category_level.cat_level':'3'},{'category_level.cl3_id':filters_for_id}]
+        filter_query['category_level.cl3_id']=filters_for_id
     elif filters_for=='cl4':
-        filter_query['$and']=[{'category_level.cat_level':'4'},{'category_level.cl4_id':filters_for_id}]
+        filter_query['category_level.cl4_id']=filters_for_id
+    
     aggregation_pipeline = [
 
         {'$match': filter_query},
-        {"$project": {"_id": 0}},
+        {"$project": {"_id": 0,'category_level':0}},
         
     ]
-    # aggregation_pipeline.append({"$sort": 'created_at'})
+    filter_data=[
+            {
+                "name": "Brands",
+                "key": "brand",
+                "data":None,
+              },
+            {
+                "name": "Categories",
+                "key": "category",
+                "data": None
+            }
+        ],
+    sort_data= [
+            {
+                "key": "new",
+                "type": "Latest",
+                "is_active": False
+            },
+            {
+                "key": "min_price",
+                "type": "Lowest Price",
+                "is_active": False
+            },
+            {
+                "key": "max_price",
+                "type": "Highest Price",
+                "is_active": False
+            },
+            {
+                "key": "popular",
+                "type": "Highest Popularity",
+                "is_active": False
+            },
+            {
+                "key": "relevance",
+                "type": "Relevance",
+                "is_active": False
+            }
+        ]
+    for i in range(len(sort_data)):
+        if sort_data[i]['key']==sort_by:
+            sort_data[i]['is_active']=True
     sort_query={}
     category_ids=[]
     brand_ids=[]
-    if sort_by:
-        if sort_by=='min_price':
-            sort_query['price']=1
-        elif sort_by=='max_price':
-            sort_query['price']=-1
-        aggregation_pipeline.append({'$sort':sort_query})
+  
     if categories:
         for category in categories:
             category_ids.append(category)
@@ -202,12 +265,79 @@ def filter_product(filters_for:str,page:str,filters_for_id:str,sort_by:Optional[
         for brandId in brandIds:
             brand_ids.append(brandId)
         aggregation_pipeline.append({'$match':{'brand.id':{'$in':brand_ids}}})
+    aggregation_pipeline.append({"$lookup" : {
+                'from': 'store',
+                'let': {
+                    'product_id': '$id'
+                },
+            'pipeline': [
+                {
+                    '$match': {
+                        '$expr': {
+                        '$and': [
+                            {
+                            '$eq': [
+                            '$product_id', '$$product_id'
+                            ]
+                            }, {
+                             '$eq': [
+                                 '$store_id', storeid
+                            ]
+                                    }
+                        ]
+                            }
+                        }
+                    }, 
+            {
+                '$project': {
+                'store_id': 1,
+                '_id': 0
+                        }
+                    }
+                ],
+                'as': 'store'
+            }})
+    if sort_by:
+        if sort_by=='min_price':
+            sort_query['price']=1
+        elif sort_by=='max_price':
+            sort_query['price']=-1
+        aggregation_pipeline.append({'$sort':sort_query})
 
 
-
-    print(aggregation_pipeline)    
+        
     aggregation_pipeline.append({'$limit': PAGE_SIZE})
-    result=list(DB["my_data"].aggregate(aggregation_pipeline))
+    print(aggregation_pipeline)
+    ans=list(DB["my_data"].aggregate(aggregation_pipeline))
+   
+    result={
+        'data':ans,
+        'links':{
+            'first':None,
+            'last':None,
+            'prev':None,
+            'next':None,
+                },
+        'meta':{
+            'current_page':page,
+            'from':1,
+            'last_page':int(page)-1,
+            'links':[
+                  {
+                    'url':None,
+                    'label':1,
+                    'active':True,
+                    }
+                ],
+        'path':'',
+        'per_page':PAGE_SIZE,
+        'to':len(ans),
+        'total':len(ans),
+        'filters':filter_data,
+        'sorts':sort_data
+    }
+    
+    }
     return result
 
 
