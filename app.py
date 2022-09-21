@@ -155,7 +155,7 @@ def product_search(request: Request):
     data_count = list(DB["search_products"].aggregate(pipe_line))
     print('NAGA COUNT', data_count)
     total_count=data_count[0].get("count")
-    total_pages=((len(ans)+PAGE_SIZE)//PAGE_SIZE)
+    total_pages=((total_count+PAGE_SIZE)//PAGE_SIZE)
     result={
     'data':{
         'header_data':[],
@@ -164,24 +164,39 @@ def product_search(request: Request):
     'links':{
         'first':path + '?page=1',
         'last': path + '?page='+str(total_pages),
-        'prev':None if int(page)-1==0 else 
-        'next':None,
+        'prev':None if int(page)-1==0 else path + '?page='+str(int(page)-1),
+        'next':path + '?page='+str(min(int(page)+1,total_pages)),
     },
     'meta':{
     'current_page':page,
     'from':1,
-    'last_page':int(page)-1,
+    'last_page':total_pages,
     'links':[
         {
         'url':None,
         'label':1,
+        'active':False,
+        },
+        {
+        'url':path,
+        'label':1,
         'active':True,
-        }
+        },
+        {
+        'url':None,
+        'label':1,
+        'active':False,
+        },
+        {
+        'url':path,
+        'label':1,
+        'active':False,
+        },
     ],
     'path': path,
     'per_page':PAGE_SIZE,
-    'to':len(ans),
-    'total':len(ans)
+    'to':skip,
+    'total':total_count
     }
     }
     additional_data = {"discount_label": None, "stock": {"available": True}}
