@@ -136,16 +136,17 @@ def get_autocomplete_pipeline(search_term, skip, limit):
 
 
 @app.get("/search")
-def product_search(store_id: str,page: str,keyword:str):
+def product_search(storeid: str,page: str,keyword:str):
     """
     Product Search API, This will help to discover the relevant products
     """
 
     user_id = 1
     skip = (int(page) - 1) * PAGE_SIZE
-    pipe_line = get_boosting_stage(keyword,store_id,skip)
+    pipe_line = get_boosting_stage(keyword,storeid,skip)
     
     ans=list(DB["search_products"].aggregate(pipe_line))
+    total_pages=((len(ans)+PAGE_SIZE)//PAGE_SIZE)
     result={
     'data':{
         'header_data':[],
@@ -168,7 +169,7 @@ def product_search(store_id: str,page: str,keyword:str):
         'active':True,
         }
     ],
-    'path':'',
+    'path':'http://127.0.0.1:8000/search',
     'per_page':PAGE_SIZE,
     'to':len(ans),
     'total':len(ans)
