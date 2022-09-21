@@ -26,7 +26,11 @@ DB = CLIENT.search_engine
 PAGE_SIZE = 10
 
 
-def get_boosting_stage(order_type, keyword, store_id, platform):
+def get_boosting_stage(keyword, store_id, platform, order_type):
+    is_mall = "0"
+    if order_type == "mall":
+        is_mall = "1"
+
 
     PIPELINE = [
             {
@@ -38,7 +42,9 @@ def get_boosting_stage(order_type, keyword, store_id, platform):
                 ]
             }
         }
+        
         },
+        {"$match": {"is_mall": is_mall}},
 
             {
             '$lookup': {
@@ -84,6 +90,7 @@ def get_boosting_stage(order_type, keyword, store_id, platform):
                 }
             }
     ]
+    print(PIPELINE)
     return PIPELINE
 
 
@@ -154,8 +161,8 @@ async def product_search(request: Request):
     # host = headers.get('host')
     # path = host + '/v1/search'
     # skip = (int(page) - 1) * PAGE_SIZE
-    pipe_line1 = get_boosting_stage(order_type, keyword, store_id, platform)
-    pipe_line = get_boosting_stage(order_type, keyword, store_id, platform)
+    pipe_line1 = get_boosting_stage(keyword, store_id, platform, order_type)
+    pipe_line = get_boosting_stage(keyword, store_id, platform, order_type)
     pipe_line.append({"$skip": skip})
     pipe_line.append({"$limit": limit})
     result = list(DB["search_products"].aggregate(pipe_line))
