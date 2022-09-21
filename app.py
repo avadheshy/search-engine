@@ -150,9 +150,11 @@ def product_search(request: Request):
     
     ans=list(DB["search_products"].aggregate(pipe_line))
     pipe_line.pop()
-    new_count_pipe = pipe_line.append({"$count": "count"})
-    data_count = DB["search_products"].aggregate(new_count_pipe)
-    total_count=data_count.get("count")
+    pipe_line.pop()
+    pipe_line.append({"$count": "count"})
+    data_count = list(DB["search_products"].aggregate(pipe_line))
+    print('NAGA COUNT', data_count)
+    total_count=data_count[0].get("count")
     total_pages=((len(ans)+PAGE_SIZE)//PAGE_SIZE)
     result={
     'data':{
@@ -182,6 +184,10 @@ def product_search(request: Request):
     'total':len(ans)
     }
     }
+    additional_data = {"discount_label": None, "stock": {"available": True}}
+    for i in result["data"]["products"]:
+        if i:
+            i.update(additional_data)
     
     return result
 
