@@ -154,12 +154,13 @@ async def product_search(request: Request):
     # host = headers.get('host')
     # path = host + '/v1/search'
     # skip = (int(page) - 1) * PAGE_SIZE
+    pipe_line1 = get_boosting_stage(order_type, keyword, store_id, platform)
     pipe_line = get_boosting_stage(order_type, keyword, store_id, platform)
     pipe_line.append({"$skip": skip})
     pipe_line.append({"$limit": limit})
     result = list(DB["search_products"].aggregate(pipe_line))
     # pipe_line.append({"$count": "count"})
-    result_count = len(list(DB["search_products"].aggregate(pipe_line)))
+    result_count = len(list(DB["search_products"].aggregate(pipe_line1)))
     # pipe_line.pop()
     # pipe_line.pop()
     # pipe_line.append({"$count": "count"})
