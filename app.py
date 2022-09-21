@@ -180,6 +180,11 @@ def product_search(request: Request):
     }
     }
     
+    additional_data = {"discount_label": None, "stock": {"available": True}}
+    for i in result:
+        if i:
+            i["data"]["products"].update(additional_data)
+    
     return result
 
 
