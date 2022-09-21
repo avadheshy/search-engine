@@ -23,7 +23,7 @@ app = FastAPI()
 CLIENT = MongoClient(
     'mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority')
 DB = CLIENT.search_engine
-PAGE_SIZE = 20
+PAGE_SIZE = 10
 
 
 def get_boosting_stage(keyword, store_id,skip):
@@ -100,7 +100,7 @@ def store_autocomplete_results(user_id, search_term, search_results):
     return True
 
 
-def get_autocomplete_pipeline(search_term, skip, limit):
+def get_autocomplete_pipeline(search_term, skip):
     """
     This is autocomplete helper function
     """
@@ -113,12 +113,6 @@ def get_autocomplete_pipeline(search_term, skip, limit):
                     'query': search_term
                 }
             }
-        },
-        {
-            '$skip': skip
-        },
-        {
-            '$limit': limit
         },
         {
             '$project': {
@@ -136,7 +130,8 @@ def get_autocomplete_pipeline(search_term, skip, limit):
 #     return True
 
 
-@app.get("/search")
+@app.get("/v1/search")
+
 def product_search(request: Request):
     """
     Product Search API, This will help to discover the relevant products
@@ -146,19 +141,27 @@ def product_search(request: Request):
     query_params = request.query_params
     user_id = 1
     page = query_params.get('page')
+    print(page)
     keyword = query_params.get('keyword')
+    host = headers.get('host')
+    path = host + '/v1/search'
     skip = (int(page) - 1) * PAGE_SIZE
-    pipe_line = get_boosting_stage(keyword,store_id,skip)
+    pipe_line = get_boosting_stage(keyword, store_id, skip)
     
     ans=list(DB["search_products"].aggregate(pipe_line))
+    pipe_line.pop()
+    new_count_pipe = pipe_line.append({"$count": "count"})
+    data_count = DB["search_products"].aggregate(new_count_pipe)
+    total_count=data_count.get("count")
+    total_pages=((len(ans)+PAGE_SIZE)//PAGE_SIZE)
     result={
     'data':{
         'header_data':[],
         'products':ans,
     },
     'links':{
-        'first':None,
-        'last':None,
+        'first':path + '?page=1',
+        'last': path + '?page='+str(total_pages),
         'prev':None,
         'next':None,
     },
@@ -173,7 +176,7 @@ def product_search(request: Request):
         'active':True,
         }
     ],
-    'path':'',
+    'path': path,
     'per_page':PAGE_SIZE,
     'to':len(ans),
     'total':len(ans)
@@ -306,7 +309,10 @@ def filter_product(filters_for:str,page:str,filters_for_id:str,storeid:str,sort_
                     }
                 ],
                 'as': 'store'
-            }})
+            }},{"$skip": skip},
+        {'$limit': PAGE_SIZE}
+
+)
     if sort_by:
         if sort_by=='min_price':
             sort_query['price']=1
