@@ -26,8 +26,8 @@ DB = CLIENT.search_engine
 PAGE_SIZE = 10
 
 
-def get_boosting_stage(keyword, store_id,skip):
-
+def get_boosting_stage(order_type, keyword, store_id, platform):
+    
     PIPELINE = [
             {
         '$search': {
@@ -80,10 +80,9 @@ def get_boosting_stage(keyword, store_id,skip):
         },
          {'$project': {
                 '_id': 0,
+                'id': 1
                 }
-            },
-        {"$skip": skip},
-        {'$limit': PAGE_SIZE}
+            }
     ]
     return PIPELINE
 
@@ -130,24 +129,14 @@ def get_autocomplete_pipeline(search_term, skip):
 #     return True
 
 
-@app.get("/v1/search")
-
-def product_search(request: Request):
+@app.post("/v1/search")
+async def product_search(request: Request):
     """
     Product Search API, This will help to discover the relevant products
     """
-    headers = request.headers
-    store_id = headers.get('storeid')
-    query_params = request.query_params
-    user_id = 1
-    page = query_params.get('page')
-    print(page)
-    keyword = query_params.get('keyword')
-    host = headers.get('host')
-    path = host + '/v1/search'
-    skip = (int(page) - 1) * PAGE_SIZE
-    pipe_line = get_boosting_stage(keyword, store_id, skip)
-    
+    # headers = request.headers
+    # store_id = headers.get('storeid')
+
     ans=list(DB["search_products"].aggregate(pipe_line))
     pipe_line.pop()
     pipe_line.pop()
@@ -205,6 +194,7 @@ def product_search(request: Request):
             i.update(additional_data)
     
     return result
+    
 
 
 @app.get("/autocomplete")
