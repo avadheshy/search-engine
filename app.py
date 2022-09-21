@@ -129,16 +129,20 @@ def get_autocomplete_pipeline(search_term, skip):
 #     return True
 
 
-@app.get("/v1/search")
-
-def product_search(request: Request):
+@app.post("/v1/search")
+async def product_search(request: Request):
     """
     Product Search API, This will help to discover the relevant products
     """
     # headers = request.headers
     # store_id = headers.get('storeid')
-    query_params = request.query_params
-    user_id = 1
+    request_data = await request.json()
+    request_data.update({"request": True})
+    DB['search_log'].insert_one(request_data)
+    request_data.pop('_id', None)
+    query_params = request_data
+
+    user_id = query_params.get('user_id')
     order_type = query_params.get('type')
     store_id = query_params.get('store_id') # mall / retail
     keyword = query_params.get('keyword')
@@ -193,10 +197,13 @@ def product_search(request: Request):
     # for i in result["data"]["products"]:
     #     if i:
     #         i.update(additional_data)
+
     product_ids = []
     for i in result:
         product_ids.append(i.get('id'))
     response = {"data": product_ids, "total": result_count}
+    DB['search_log'].insert_one(response)
+    response.pop('_id', None)
     return response
 
 
