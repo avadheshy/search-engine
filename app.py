@@ -3,7 +3,7 @@ from multiprocessing import managers
 from multiprocessing.sharedctypes import Value
 import os
 from io import StringIO
-from fastapi import FastAPI, Body, HTTPException, status, Query, File, UploadFile
+from fastapi import FastAPI, Body, HTTPException, status, Query, File, UploadFile, Header, Request
 from fastapi.responses import Response, JSONResponse
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field, EmailStr
@@ -14,6 +14,7 @@ import time
 import csv
 from io import BytesIO
 import codecs
+from typing import Union
 
 
 
@@ -136,12 +137,16 @@ def get_autocomplete_pipeline(search_term, skip, limit):
 
 
 @app.get("/search")
-def product_search(store_id: str,page: str,keyword:str):
+def product_search(request: Request):
     """
     Product Search API, This will help to discover the relevant products
     """
-
+    headers = request.headers
+    store_id = headers.get('storeid')
+    query_params = request.query_params
     user_id = 1
+    page = query_params.get('page')
+    keyword = query_params.get('keyword')
     skip = (int(page) - 1) * PAGE_SIZE
     pipe_line = get_boosting_stage(keyword,store_id,skip)
     
