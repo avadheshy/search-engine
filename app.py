@@ -26,7 +26,7 @@ DB = CLIENT.search_engine
 PAGE_SIZE = 10
 
 
-def get_boosting_stage(keyword, store_id,skip):
+def get_boosting_stage(order_type, keyword, store_id, platform):
 
     PIPELINE = [
             {
@@ -80,10 +80,9 @@ def get_boosting_stage(keyword, store_id,skip):
         },
          {'$project': {
                 '_id': 0,
+                'id': 1
                 }
-            },
-        {"$skip": skip},
-        {'$limit': PAGE_SIZE}
+            }
     ]
     return PIPELINE
 
@@ -136,60 +135,69 @@ def product_search(request: Request):
     """
     Product Search API, This will help to discover the relevant products
     """
-    headers = request.headers
-    store_id = headers.get('storeid')
+    # headers = request.headers
+    # store_id = headers.get('storeid')
     query_params = request.query_params
     user_id = 1
-    page = query_params.get('page')
-    print(page)
+    order_type = query_params.get('type')
+    store_id = query_params.get('store_id') # mall / retail
     keyword = query_params.get('keyword')
-    host = headers.get('host')
-    path = host + '/v1/search'
-    skip = (int(page) - 1) * PAGE_SIZE
-    pipe_line = get_boosting_stage(keyword, store_id, skip)
+    platform = query_params.get('platform') # pos/app
+    skip = int(query_params.get('skip')) if query_params.get('skip') else 0
+    limit = int(query_params.get('limit')) if query_params.get('limit') else 10
+
     
-    ans=list(DB["search_products"].aggregate(pipe_line))
-    pipe_line.pop()
-    pipe_line.pop()
-    pipe_line.append({"$count": "count"})
-    data_count = list(DB["search_products"].aggregate(pipe_line))
-    print('NAGA COUNT', data_count)
-    total_count=data_count[0].get("count")
-    total_pages=((len(ans)+PAGE_SIZE)//PAGE_SIZE)
-    result={
-    'data':{
-        'header_data':[],
-        'products':ans,
-    },
-    'links':{
-        'first':path + '?page=1',
-        'last': path + '?page='+str(total_pages),
-        'prev':None,
-        'next':None,
-    },
-    'meta':{
-    'current_page':page,
-    'from':1,
-    'last_page':int(page)-1,
-    'links':[
-        {
-        'url':None,
-        'label':1,
-        'active':True,
-        }
-    ],
-    'path': path,
-    'per_page':PAGE_SIZE,
-    'to':len(ans),
-    'total':len(ans)
-    }
-    }
-    additional_data = {"discount_label": None, "stock": {"available": True}}
-    for i in result["data"]["products"]:
-        if i:
-            i.update(additional_data)
-    
-    return result
+    # host = headers.get('host')
+    # path = host + '/v1/search'
+    # skip = (int(page) - 1) * PAGE_SIZE
+    pipe_line = get_boosting_stage(order_type, keyword, store_id, platform)
+    pipe_line.append({"$skip": skip})
+    pipe_line.append({"$limit": limit})
+    result = list(DB["search_products"].aggregate(pipe_line))
+    # pipe_line.append({"$count": "count"})
+    result_count = len(list(DB["search_products"].aggregate(pipe_line)))
+    # pipe_line.pop()
+    # pipe_line.pop()
+    # pipe_line.append({"$count": "count"})
+
+    # total_pages=((len(ans)+PAGE_SIZE)//PAGE_SIZE)
+    # result={
+    # 'data':{
+    #     'header_data':[],
+    #     'products':ans,
+    # },
+    # 'links':{
+    #     'first':path + '?page=1',
+    #     'last': path + '?page='+str(total_pages),
+    #     'prev':None,
+    #     'next':None,
+    # },
+    # 'meta':{
+    # 'current_page':page,
+    # 'from':1,
+    # 'last_page':int(page)-1,
+    # 'links':[
+    #     {
+    #     'url':None,
+    #     'label':1,
+    #     'active':True,
+    #     }
+    # ],
+    # 'path': path,
+    # 'per_page':PAGE_SIZE,
+    # 'to':len(ans),
+    # 'total':len(ans)
+    # }
+    # }
+    # additional_data = {"discount_label": None, "stock": {"available": True}}
+    # for i in result["data"]["products"]:
+    #     if i:
+    #         i.update(additional_data)
+    product_ids = []
+    for i in result:
+        product_ids.append(i.get('id'))
+    response = {"data": product_ids, "total": result_count}
+    return response
 
 
 @app.get("/autocomplete")
