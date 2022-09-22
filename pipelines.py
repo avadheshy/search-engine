@@ -10,7 +10,7 @@ def get_boosting_stage(
         {"$match": {"is_mall": is_mall}},
         {
             "$lookup": {
-                "from": "store",
+                "from": "product_store",
                 "let": {"product_id": "$id"},
                 "pipeline": [
                     {

@@ -9,7 +9,8 @@ app = FastAPI()
 CLIENT = MongoClient(
     "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
 )
-DB = CLIENT.search_engine
+# DB = CLIENT.search_engine
+DB = CLIENT.search
 
 
 def store_search_terms(user_id, search_term, search_results):
