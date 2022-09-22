@@ -42,16 +42,15 @@ async def product_search(request: Request):
     request_data = await request.json()
 
     # ............... REQUEST DB LOG ...................
-    # Request DB Log
-    # request_data.update({"request": True})
-    # DB['search_log'].insert_one(request_data)
-    # request_data.pop('_id', None)
+    DB['search_log'].insert_one(request_data)
+    request_data.pop('_id', None)
+    # ..................................................
 
     user_id = request_data.get("user_id")
     order_type = request_data.get("type")
     store_id = request_data.get("store_id")  # mall / retail
     keyword = request_data.get("keyword")
-    platform = request_data.get("platform")  # pos/app
+    platform = request_data.get("platform")  # pos / app
     skip = int(request_data.get("skip")) if request_data.get("skip") else 0
     limit = int(request_data.get("limit")) if request_data.get("limit") else 10
 
@@ -65,8 +64,9 @@ async def product_search(request: Request):
     response["total"] = count.get("count") if count else 0
 
     # ............... RESPONSE DB LOG ...................
-    # DB['search_log'].insert_one(response)
-    # response.pop('_id', None)
+    DB['search_log'].insert_one(response)
+    response.pop('_id', None)
+    # ...................................................
 
     return response
 
