@@ -4,10 +4,17 @@ def get_boosting_stage(
     is_mall = "0"
     if order_type == "mall":
         is_mall = "1"
+    match_filter = {"is_mall": is_mall}
+
+    if platform == "app":
+        match_filter["sale_app"] = "1"
+    else:
+        match_filter["sale_pos"] = "1"
+
 
     PIPELINE = [
         {"$search": {"autocomplete": {"query": keyword, "path": "name"}}},
-        {"$match": {"is_mall": is_mall}},
+        {"$match": match_filter},
         {
             "$lookup": {
                 "from": "product_store",
