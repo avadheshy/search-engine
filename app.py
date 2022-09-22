@@ -38,7 +38,9 @@ def get_boosting_stage(order_type, keyword, store_id, platform):
                 ]
             }
         }
+        
         },
+        {"$match": {"is_mall": is_mall}},
 
             {
             '$lookup': {
@@ -84,6 +86,7 @@ def get_boosting_stage(order_type, keyword, store_id, platform):
                 }
             }
     ]
+    print(PIPELINE)
     return PIPELINE
 
 
