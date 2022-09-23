@@ -4,6 +4,17 @@ from pymongo import MongoClient
 from pipelines import get_boosting_stage
 from constants import PAGE_SIZE
 
+import sentry_sdk
+
+
+sentry_sdk.init(
+    dsn="https://fa760c10052c4da88ba731dc48c9020e@o1194835.ingest.sentry.io/6768729",
+
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production,
+    traces_sample_rate=1.0,
+)
 
 app = FastAPI()
 CLIENT = MongoClient(
