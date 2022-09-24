@@ -40,9 +40,10 @@ async def product_search(request: Request):
     Product Search API, This will help to discover the relevant products
     """
     request_data = await request.json()
-    response = {}
-    error_message = ''
+    response = {"total": 0, "data": []}
+    error_message = ""
     try:
+        # Request Parsing
         user_id = request_data.get("user_id")
         order_type = request_data.get("type")
         store_id = request_data.get("store_id")  # mall / retail
@@ -51,20 +52,28 @@ async def product_search(request: Request):
         skip = int(request_data.get("skip")) if request_data.get("skip") else 0
         limit = int(request_data.get("limit")) if request_data.get("limit") else 10
 
-        pipe_line = get_boosting_stage(keyword, store_id, platform, order_type, skip, limit)
+        # MongoDB Aggregation Pipeline
+        pipe_line = get_boosting_stage(
+            keyword, store_id, platform, order_type, skip, limit
+        )
+
+        # DB Query
         response = DB["search_products"].aggregate(pipe_line).next()
 
+        # Response Formatting
         response["data"] = (
             [i.get("id") for i in response["data"]] if response["data"] else []
         )
         count = response["total"][0] if response["total"] else {}
         response["total"] = count.get("count") if count else 0
     except Exception as error:
-        error_message = '{0}'.format(error)
+        error_message = "{0}".format(error)
 
     # ...............REQUEST, RESPONSE, ERROR DB LOG ...................
 
-    DB['search_log'].insert_one({"request": request_data, "response": response, 'msg': error_message})
+    DB["search_log"].insert_one(
+        {"request": request_data, "response": response, "msg": error_message}
+    )
 
     # ...................................................
 
@@ -90,7 +99,6 @@ def get_autocomplete_pipeline(search_term, skip):
 # def add_booster(attribute_booster: dict):
 #     DB['product_booster'].insert_one(attribute_booster)
 #     return True
-
 
 
 @app.post("/search")
