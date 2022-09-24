@@ -40,32 +40,32 @@ async def product_search(request: Request):
     Product Search API, This will help to discover the relevant products
     """
     request_data = await request.json()
+    response = {}
+    error_message = ''
+    try:
+        user_id = request_data.get("user_id")
+        order_type = request_data.get("type")
+        store_id = request_data.get("store_id")  # mall / retail
+        keyword = request_data.get("keyword")
+        platform = request_data.get("platform")  # pos / app
+        skip = int(request_data.get("skip")) if request_data.get("skip") else 0
+        limit = int(request_data.get("limit")) if request_data.get("limit") else 10
 
-    # ............... REQUEST DB LOG ...................
-    DB['search_log'].insert_one(request_data)
-    request_data.pop('_id', None)
-    # ..................................................
+        pipe_line = get_boosting_stage(keyword, store_id, platform, order_type, skip, limit)
+        response = DB["search_products"].aggregate(pipe_line).next()
 
-    user_id = request_data.get("user_id")
-    order_type = request_data.get("type")
-    store_id = request_data.get("store_id")  # mall / retail
-    keyword = request_data.get("keyword")
-    platform = request_data.get("platform")  # pos / app
-    skip = int(request_data.get("skip")) if request_data.get("skip") else 0
-    limit = int(request_data.get("limit")) if request_data.get("limit") else 10
+        response["data"] = (
+            [i.get("id") for i in response["data"]] if response["data"] else []
+        )
+        count = response["total"][0] if response["total"] else {}
+        response["total"] = count.get("count") if count else 0
+    except Exception as error:
+        error_message = '{0}'.format(error)
 
-    pipe_line = get_boosting_stage(keyword, store_id, platform, order_type, skip, limit)
-    response = DB["search_products"].aggregate(pipe_line).next()
+    # ...............REQUEST, RESPONSE, ERROR DB LOG ...................
 
-    response["data"] = (
-        [i.get("id") for i in response["data"]] if response["data"] else []
-    )
-    count = response["total"][0] if response["total"] else {}
-    response["total"] = count.get("count") if count else 0
+    DB['search_log'].insert_one({"request": request_data, "response": response, 'msg': error_message})
 
-    # ............... RESPONSE DB LOG ...................
-    DB['search_log'].insert_one(response)
-    response.pop('_id', None)
     # ...................................................
 
     return response
