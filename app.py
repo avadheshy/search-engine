@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Query
+from fastapi import FastAPI, Request, Query, HTTPException
 from typing import Optional, List
 from pymongo import MongoClient
 from pipelines import get_boosting_stage
@@ -50,6 +50,7 @@ async def product_search(request: Request):
     """
     Product Search API, This will help to discover the relevant products
     """
+    raise HTTPException(status_code=400, detail="Request is not accepted!")
     request_data = await request.json()
     response = {"total": 0, "data": []}
     error_message = ""
