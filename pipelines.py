@@ -13,7 +13,24 @@ def get_boosting_stage(
 
 
     PIPELINE = [
-        {"$search": {"autocomplete": {"query": keyword, "path": "name"}}},
+            {'$search': {
+            'compound': {
+                'should': [
+                    {
+                        'autocomplete': {
+                            'query': keyword,
+                            'path': 'name',
+                        },
+                    },
+                    {
+                        'autocomplete': {
+                            'query': keyword,
+                            'path': 'barcode',
+                        },
+                    },
+                ],
+            },
+        }},
         {"$match": match_filter},
         {
             "$lookup": {
