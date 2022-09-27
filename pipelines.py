@@ -1,3 +1,5 @@
+from constants import STORE_WH_MAP
+
 def get_boosting_stage(
     keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
 ):
@@ -12,6 +14,7 @@ def get_boosting_stage(
         match_filter["sale_pos"] = "1"
 
     if is_mall == "1":
+        wh_id = STORE_WH_MAP.get(store_id)
         PIPELINE = [
                 {'$search': {
                 'compound': {
@@ -32,7 +35,24 @@ def get_boosting_stage(
                 },
             }},
             {"$match": match_filter},
-            {"$project": {"_id": 0, "id": 1}},
+            {
+                '$lookup': {
+                    'from': 'product_warehouse_stocks', 
+                    'localField': 'id', 
+                    'foreignField': 'product_id', 
+                    'as': 'data', 
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'warehouse_id': wh_id
+                            }
+                        },
+                        {"$project": {"warehouse_id": 1, "stock": 1}}
+                    ]
+                }},
+    
+            {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"}}},
+            {"$sort": {"stock": -1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],

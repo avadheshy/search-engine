@@ -1,4 +1,3 @@
-PAGE_SIZE = 10
 STORE_WH_MAP = {
     "1": "3",
     "2": "3",

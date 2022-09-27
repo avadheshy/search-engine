@@ -91,6 +91,14 @@ async def product_search(request: Request):
 
     return response
 
+@app.get("/store_map")
+def store_warehouse_map(request: Request):
+    wh_store_map = list(DB['stores'].find({}, {"fulfil_warehouse_id": 1, "id": 1, "_id": 0}))
+    WAREHOUSE_KIRANA_MAP = {}
+    for i in wh_store_map:
+        WAREHOUSE_KIRANA_MAP[i.get('id')] = i.get('fulfil_warehouse_id')
+    return WAREHOUSE_KIRANA_MAP
+
 
 def get_autocomplete_pipeline(search_term, skip):
     """
