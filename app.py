@@ -50,7 +50,7 @@ async def product_search(request: Request):
     """
     Product Search API, This will help to discover the relevant products
     """
-    raise HTTPException(status_code=400, detail="Request is not accepted!")
+    # raise HTTPException(status_code=400, detail="Request is not accepted!")
     request_data = await request.json()
     response = {"total": 0, "data": []}
     error_message = ""

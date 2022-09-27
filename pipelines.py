@@ -52,6 +52,7 @@ def get_boosting_stage(
                 }},
     
             {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"}}},
+            {"$match": {"stock": {"$gt": 0}}},
             {"$sort": {"stock": -1}},
             {
                 "$facet": {
@@ -98,13 +99,15 @@ def get_boosting_stage(
                                 }
                             }
                         },
-                        {"$project": {"store_id": 1, "_id": 0}},
+                        {"$project": {"store_id": 1, "_id": 0, "inv_qty": 1}},
                     ],
                     "as": "store",
                 }
             },
             {"$match": {"store.store_id": store_id}},
-            {"$project": {"_id": 0, "id": 1}},
+            {"$project": {"_id": 0, "id": 1, 'inv_qty': {"$first": "$store.inv_qty"}}},
+            {"$match": {"inv_qty": {"$gt": 0}}},
+            {"$sort": {"inv_qty": -1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
