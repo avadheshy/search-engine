@@ -1,101 +1,97 @@
-# from pymongo import MongoClient
-# CLIENT = MongoClient(
-#     'mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority')
-# DB = CLIENT.search
-# ans=0
-# for i in range(1,200000,10000):
-#     ids = list(map(str, list(range(i, i+10000))))
-#     aggregate_pipe = [
-#    {'$match' : {'id' : {'$in' : ids}}},
-   
-#     {
-#         '$lookup': {
-#             'from': 'all_categories', 
-#             'localField': 'parent_id', 
-#             'foreignField': 'id', 
-#             'as': 'cat_data'
-#         }
-#     }, {
-#         '$unwind': {
-#             'path': '$cat_data'
-#         }
-#     }, {
-#         '$project': {
-#             'id': 1, 
-#             'name': 1, 
-#             'image_url': 1, 
-#             'group_id': 1, 
-#             'uom': 1, 
-#             'mrp': 1, 
-#             'price': 1, 
-#             'hsn_sac_code': 1, 
-#             'barcode': 1, 
-#             'status': 1, 
-#             'sale_app': 1, 
-#             'sale_pos': 1, 
-#             'is_mall': 1, 
-#             'brand': 1, 
-#             'group_name': 1, 
-#             'category': 1, 
-#             'images': 1, 
-#             'cat_level': {
-#                 'cl1_id': '$cat_data.cl1_id', 
-#                 'cl1_name': '$cat_data.cl1_name', 
-#                 'cl2_id': '$cat_data.cl2_id', 
-#                 'cl2_name': '$cat_data.cl2_name', 
-#                 'cl3_id': '$cat_data.cl3_id', 
-#                 'cl3_name': '$cat_data.cl3_name', 
-#                 'cl4_id': '$cat_data.cl4_id', 
-#                 'cl4_name': '$cat_data.cl4_name'
-#             }
-#         }
-#     }, 
-#     ]
-#     data=list(DB['data'].aggregate(aggregate_pipe))
-#     DB['search_products'].insert_many(data)
-#     a=len(data)
-#     ans+=a
-#     print(a,ans)
-import unittest
-import requests
-import mysql.connector
+from mysql import connector
+import mysql
 
-# url='https://uat-discovery.1knetworks.com/docs#/default/product_search_v1_search_post'
-# parms={"type":"retail","store_id":"64","keyword":"parle","platform":"pos","skip":"0","limit":"10"}
-# resp=requests.post(url,parms)
-# print(resp)
-# print(resp.status_code)  
-# class SimpleTest(unittest.TestCase):
-  
-#     def test(self):        
-#         self.assertTrue(True)
-  
-# if __name__ == '__main__':
-#     unittest.main()
-import mysql.connector
+from datetime import datetime, timedelta
+from pymongo import MongoClient
+CLIENT = MongoClient(
+    "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
+)
+DB=CLIENT.search
 
-try:
-    connection = mysql.connector.connect(host='localhost',
-                                         database='Electronics',
-                                         user='pynative',
-                                         password='pynative@#29')
 
-    mySql_Create_Table_Query = """CREATE TABLE Laptop ( 
-                             Id int(11) NOT NULL,
-                             Name varchar(250) NOT NULL,
-                             Price float NOT NULL,
-                             Purchase_date Date NOT NULL,
-                             PRIMARY KEY (Id)) """
 
-    cursor = connection.cursor()
-    result = cursor.execute(mySql_Create_Table_Query)
-    print("Laptop Table created successfully ")
 
-except mysql.connector.Error as error:
-    print("Failed to create table in MySQL: {}".format(error))
-finally:
-    if connection.is_connected():
-        cursor.close()
-        connection.close()
-        print("MySQL connection is closed")
-   
+
+current_time = datetime.now()
+prev_time = current_time - timedelta(hours=180)
+# import ipdb; ipdb.set_trace()
+connection = mysql.connector.connect(host='127.0.0.1',
+                                         database='pos',
+                                         port=3310,
+                                         user='nagendra.kumar',
+                                         password='hwkUBlUpdM0G7ORQ')
+cur=connection.cursor()
+Query = "SELECT * FROM  pos.inventories WHERE inventories.updated_at > %s"
+
+cur.execute(Query,(prev_time,))
+result=cur.fetchall()
+    
+# keys=["id","product_id","store_id",'quantity','batch_number','unit_cost_price',"expiry_date","status","shipment_id","user_id","created_at","updated_at"]
+data=[]
+f = '%Y-%m-%d %H:%M:%S'
+
+# for res in result:
+#     payload=dict(zip(keys,res))
+#     data.append(payload)
+keys=["id","product_id","store_id",'quantity','batch_number','unit_cost_price',"expiry_date","status","shipment_id","user_id","created_at","updated_at"]
+data=[]
+for res in result:
+    d={}
+    for i in range(len(keys)):
+        if keys[i]=='quantity':
+            d[keys[i]]=float(res[i])
+        elif keys[i] == "unit_cost_price":
+                d[keys[i]] = float(res[i]) if res[i] else None
+        elif keys[i]=='created_at':
+            d[keys[i]]= res[i].strftime(f)
+        elif keys[i]=='updated_at':
+            d[keys[i]]=res[i].strftime(f)
+        else:
+            d[keys[i]]=res[i]
+    
+    data.append(d)
+for res in data:
+    query={}
+    query['product_id']=str(res['product_id'])
+    query['store_id']=str(res['store_id'])
+    print(query)
+    DB['inventories'].update_many(query,{'$set':res},**{'upsert':True})
+    
+
+#product store
+Query1 = "SELECT * FROM  pos.product_store WHERE product_store.updated_at > %s"
+cur.execute(Query1,(prev_time,))
+result=cur.fetchall()
+keys1=["id","store_id","product_id",'price','wholesale_price','wholesale_moq','old_price',"fast_sale","status","sale_app","sale_pos",'auto_pricing_at',"created_at","updated_at"]
+data=[]
+for res in result:
+    d={}
+    for i in range(len(keys1)):
+        if keys1[i]=='price':
+            d[keys1[i]]=float(res[i])
+        elif keys1[i]=='wholesale_price':
+            d[keys1[i]]=float(res[i]) if res[i] else None
+        elif keys1[i]=='old_price':
+            d[keys1[i]]=float(res[i]) if res[i] else None
+        elif keys1[i]=='created_at':
+            d[keys1[i]]= res[i].strftime(f)
+        elif keys1[i]=='updated_at':
+            d[keys1[i]]=res[i].strftime(f)
+        elif keys1[i]=='auto_pricing_at':
+            d[keys1[i]]=res[i].strftime(f)    
+        else:
+            d[keys1[i]]=res[i]
+    
+    data.append(d)
+print(data)
+for res in data:
+    query={}
+    query['product_id']=str(res['product_id'])
+    query['store_id']=str(res['store_id'])
+    print(query)
+    DB['product_store'].update_many(query,{'$set':res},**{'upsert':True})
+
+
+
+
+    

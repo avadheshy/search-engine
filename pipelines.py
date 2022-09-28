@@ -1,3 +1,7 @@
+from curses import keyname
+from unicodedata import name
+
+
 def get_boosting_stage(
     keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
 ):
@@ -124,3 +128,30 @@ def get_listing_stage(
     aggregation_pipeline.append({"$skip": skip})
     aggregation_pipeline.append({"$limit": PAGE_SIZE})
     return aggregation_pipeline
+
+
+# {
+#     "$search": {
+#         "compound": {
+#             "must": [
+#                 {
+#                     "autocomplete": {
+#                             "query": 'keyword',
+#                             "path": 'name',
+#                             "fuzzy": {"maxEdits": 1, "maxExpansions": 10},
+#                     }
+#                 }
+#                     ],
+#             "should": [
+#                 {
+#                     "phrase": {
+#                         "query": keyword,
+#                         "path": 'name',
+#                         "slop": 2,
+#                     }
+#                 }
+#                     ],
+#                 },
+            
+#             }
+#         }
