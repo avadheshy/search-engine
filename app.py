@@ -1,5 +1,11 @@
+<<<<<<< HEAD
 from unittest import skip
 from fastapi import FastAPI, Request, Query
+||||||| 405743d
+from fastapi import FastAPI, Request, Query
+=======
+from fastapi import FastAPI, Request, Query, HTTPException
+>>>>>>> 5731a5cb0a7ff41665a20931e7aa9c7f69da73fd
 from typing import Optional, List
 from pymongo import MongoClient
 from pipelines import get_boosting_stage,get_listing_stage
@@ -50,36 +56,54 @@ async def product_search(request: Request):
     """
     Product Search API, This will help to discover the relevant products
     """
+    # raise HTTPException(status_code=400, detail="Request is not accepted!")
     request_data = await request.json()
+    response = {"total": 0, "data": []}
+    error_message = ""
+    try:
+        # Request Parsing
+        user_id = request_data.get("user_id")
+        order_type = request_data.get("type")
+        store_id = request_data.get("store_id")  # mall / retail
+        keyword = request_data.get("keyword")
+        platform = request_data.get("platform")  # pos / app
+        skip = int(request_data.get("skip")) if request_data.get("skip") else 0
+        limit = int(request_data.get("limit")) if request_data.get("limit") else 10
 
-    # ............... REQUEST DB LOG ...................
-    DB['search_log'].insert_one(request_data)
-    request_data.pop('_id', None)
-    # ..................................................
+        # MongoDB Aggregation Pipeline
+        pipe_line = get_boosting_stage(
+            keyword, store_id, platform, order_type, skip, limit
+        )
 
-    user_id = request_data.get("user_id")
-    order_type = request_data.get("type")
-    store_id = request_data.get("store_id")  # mall / retail
-    keyword = request_data.get("keyword")
-    platform = request_data.get("platform")  # pos / app
-    skip = int(request_data.get("skip")) if request_data.get("skip") else 0
-    limit = int(request_data.get("limit")) if request_data.get("limit") else 10
+        # DB Query
+        response = DB["search_products"].aggregate(pipe_line).next()
 
-    pipe_line = get_boosting_stage(keyword, store_id, platform, order_type, skip, limit)
-    response = DB["search_products"].aggregate(pipe_line).next()
+        # Response Formatting
+        response["data"] = (
+            [i.get("id") for i in response["data"]] if response["data"] else []
+        )
+        count = response["total"][0] if response["total"] else {}
+        response["total"] = count.get("count") if count else 0
+    except Exception as error:
+        error_message = "{0}".format(error)
 
-    response["data"] = (
-        [i.get("id") for i in response["data"]] if response["data"] else []
+    # ...............REQUEST, RESPONSE, ERROR DB LOG ...................
+
+    DB["search_log"].insert_one(
+        {"request": request_data, "response": response, "msg": error_message}
     )
-    count = response["total"][0] if response["total"] else {}
-    response["total"] = count.get("count") if count else 0
 
-    # ............... RESPONSE DB LOG ...................
-    DB['search_log'].insert_one(response)
-    response.pop('_id', None)
     # ...................................................
 
     return response
+
+@app.get("/store_map")
+def store_warehouse_map(request: Request):
+    wh_store_map = list(DB['stores'].find({}, {"fulfil_warehouse_id": 1, "id": 1, "_id": 0}))
+    WAREHOUSE_KIRANA_MAP = {}
+    for i in wh_store_map:
+        WAREHOUSE_KIRANA_MAP[i.get('id')] = i.get('fulfil_warehouse_id')
+    return WAREHOUSE_KIRANA_MAP
 
 
 def get_autocomplete_pipeline(search_term, skip):
@@ -101,7 +125,6 @@ def get_autocomplete_pipeline(search_term, skip):
 # def add_booster(attribute_booster: dict):
 #     DB['product_booster'].insert_one(attribute_booster)
 #     return True
-
 
 
 @app.post("/search")
