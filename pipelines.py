@@ -198,28 +198,3 @@ def get_listing_stage(
     return aggregation_pipeline
 
 
-# {
-#     "$search": {
-#         "compound": {
-#             "must": [
-#                 {
-#                     "autocomplete": {
-#                             "query": 'keyword',
-#                             "path": 'name',
-#                             "fuzzy": {"maxEdits": 1, "maxExpansions": 10},
-#                     }
-#                 }
-#                     ],
-#             "should": [
-#                 {
-#                     "phrase": {
-#                         "query": keyword,
-#                         "path": 'name',
-#                         "slop": 2,
-#                     }
-#                 }
-#                     ],
-#                 },
-            
-#             }
-#         }

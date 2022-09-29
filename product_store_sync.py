@@ -53,6 +53,10 @@ def sync_product_store(prev_time):
                 d[keys1[i]] = float(res[i]) if res[i] else 0.0
             elif keys1[i]=='old_price':
                 d[keys1[i]]=float(res[i]) if res[i] else 0.0
+            elif keys1[i]=='sale_app':
+                d[keys1[i]]=str(res[i]) if res[i] else "0"
+            elif keys1[i]=='sale_pos':
+                d[keys1[i]]=float(res[i]) if res[i] else "0"
             elif keys1[i] == "created_at":
                 d[keys1[i]] = res[i].strftime(f) if res[i] else None
             elif keys1[i] == "updated_at":

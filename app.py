@@ -1,11 +1,4 @@
-<<<<<<< HEAD
-from unittest import skip
-from fastapi import FastAPI, Request, Query
-||||||| 405743d
-from fastapi import FastAPI, Request, Query
-=======
 from fastapi import FastAPI, Request, Query, HTTPException
->>>>>>> 5731a5cb0a7ff41665a20931e7aa9c7f69da73fd
 from typing import Optional, List
 from pymongo import MongoClient
 from pipelines import get_boosting_stage,get_listing_stage

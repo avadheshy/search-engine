@@ -36,13 +36,13 @@ def sync_mall_data(prev_time):
         d = {}
         for i in range(len(keys1)):
             if keys1[i] == "stock":
-                d[keys1[i]] = float(res[i]) if res[i] else None
+                d[keys1[i]] = float(res[i]) if res[i] else 0
             elif keys1[i] == "created_at":
                 d[keys1[i]] = res[i].strftime(f) if res[i] else None
             elif keys1[i] == "updated_at":
                 d[keys1[i]] = res[i].strftime(f) if res[i] else None
             else:
-                d[keys1[i]] = res[i] if res[i] else None
+                d[keys1[i]] = str(res[i]) if res[i] else "0"
         data.append(d)
     payload = []
     for res in data:

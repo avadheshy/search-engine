@@ -72,10 +72,16 @@ def sync_inventories(result):
     for res in result:
         d = {}
         for i in range(len(keys)):
-            if keys[i] == "quantity":
-                d[keys[i]] = float(res[i]) if res[i] else None
+            if keys[i] == "id":
+                d[keys[i]] = str(res[i]) if res[i] else "0"
+            elif keys[i] == "product_id":
+                d[keys[i]] = str(res[i]) if res[i] else "0"
+            elif keys[i] == "store_id":
+                d[keys[i]] = str(res[i]) if res[i] else "0"
+            elif keys[i] == "quantity":
+                d[keys[i]] = float(res[i]) if res[i] else 0
             elif keys[i] == "unit_cost_price":
-                d[keys[i]] = float(res[i]) if res[i] else None    
+                d[keys[i]] = float(res[i]) if res[i] else 0   
             elif keys[i] == "created_at":
                 d[keys[i]] = res[i].strftime(f) if res[i] else None
             elif keys[i] == "updated_at":

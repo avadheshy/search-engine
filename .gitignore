@@ -1,6 +1,9 @@
 __pycache__
 myenv/
+start.sh
 abc.py
+
+test.py
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

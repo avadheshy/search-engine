@@ -55,7 +55,7 @@ for res in data:
     query['product_id']=str(res['product_id'])
     query['store_id']=str(res['store_id'])
     print(query)
-    DB['inventories'].update_many(query,{'$set':res},**{'upsert':True})
+    DB['inventories'].update_many(query,{'$set':res},{'upsert':True})
     
 
 #product store
@@ -89,7 +89,7 @@ for res in data:
     query['product_id']=str(res['product_id'])
     query['store_id']=str(res['store_id'])
     print(query)
-    DB['product_store'].update_many(query,{'$set':res},**{'upsert':True})
+    DB['product_store'].update_many(query,{'$set':res},{'upsert':True})
 
 
 

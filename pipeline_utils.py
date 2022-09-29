@@ -165,7 +165,7 @@ def sync_inventories(result):
     update_product_payload = []
 
     for inv_count in inventory_count:
-		update_product_payload.append(UpdateOne({'product_id': inv_count.get('product_id'), 'store_id': inv_count.get('store_id')}, {"$set": {"inv_qty": inv_count.get("inv_qty"), "qty_source": "cron"}}))
+        update_product_payload.append(UpdateOne({'product_id': inv_count.get('product_id'), 'store_id': inv_count.get('store_id')}, {"$set": {"inv_qty": inv_count.get("inv_qty"), "qty_source": "cron"}}))
 
     DB['product_store'].bulk_write(update_product_payload)
     return True, "Data Synced Successfully."

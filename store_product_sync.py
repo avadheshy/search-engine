@@ -60,12 +60,22 @@ def sync_product_store(result):
     for res in result:
         d = {}
         for i in range(len(keys1)):
-            if keys1[i] == "price":
-                d[keys1[i]] = float(res[i]) if res[i] else None
+            if keys1[i] == "id":
+                d[keys1[i]] = str(res[i]) if res[i] else "0"
+            elif keys1[i] == "product_id":
+                d[keys1[i]] = str(res[i]) if res[i] else "0"
+            elif keys1[i] == "store_id":
+                d[keys1[i]] = str(res[i]) if res[i] else "0"
+            elif keys1[i] == "price":
+                d[keys1[i]] = float(res[i]) if res[i] else 0
             elif keys1[i] == "wholesale_price":
-                d[keys1[i]] = float(res[i]) if res[i] else None
+                d[keys1[i]] = float(res[i]) if res[i] else 0
             elif keys1[i] == "old_price":
-                d[keys1[i]] = float(res[i]) if res[i] else None    
+                d[keys1[i]] = float(res[i]) if res[i] else 0
+            elif keys1[i] == "sale_app":
+                d[keys1[i]] = str(res[i]) if res[i] else "0"
+            elif keys1[i] == "sale_pos":
+                d[keys1[i]] = str(res[i]) if res[i] else "0"    
             elif keys1[i] == "created_at":
                 d[keys1[i]] = res[i].strftime(f) if res[i] else None
             elif keys1[i] == "updated_at":
@@ -106,12 +116,15 @@ def sync_inventories(result):
         "created_at",
         "updated_at",
     ]
+
     data = []
     for res in result:
         d = {}
         for i in range(len(keys)):
             if keys[i] == "quantity":
-                d[keys[i]] = float(res[i]) if res[i] else None
+                d[keys[i]] = float(res[i]) if res[i] else 0
+            elif (keys[i] == "id" or keys[i] == "product_id" or keys[i] == "store_id" or keys[i] == "shipment_id" or keys[i] == "user_id"):
+                d[keys[i]] = str(res[i]) if res[i] else "0"
             elif keys[i] == "created_at":
                 d[keys[i]] = res[i].strftime(f) if res[i] else None
             elif keys[i] == "updated_at":
