@@ -83,7 +83,7 @@ async def product_search(request: Request):
 
     # ...............REQUEST, RESPONSE, ERROR DB LOG ...................
 
-    DB["search_log"].insert_one(
+    DB["search_log_1"].insert_one(
         {"request": request_data, "response": response, "msg": error_message}
     )
 

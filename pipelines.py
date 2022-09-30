@@ -23,6 +23,11 @@ def get_boosting_stage(
                             'autocomplete': {
                                 'query': keyword,
                                 'path': 'name',
+                                'fuzzy': {
+                                    'maxEdits': 1,
+                                    'prefixLength': 0
+                                },
+                                "score": { "boost": { "value": 3}}
                             },
                         },
                         {
@@ -72,6 +77,11 @@ def get_boosting_stage(
                             'autocomplete': {
                                 'query': keyword,
                                 'path': 'name',
+                                'fuzzy': {
+                                    'maxEdits': 1,
+                                    'prefixLength': 0
+                                    },
+                                "score": { "boost": { "value": 3}}
                             },
                         },
                         {
