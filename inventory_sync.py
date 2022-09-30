@@ -91,7 +91,8 @@ def sync_inventories(result):
         data.append(d)
     payload = []
     p_ids = []
-    store_ids = [] 
+    store_ids = []
+    product_store_map = []
     for res in data:
         query = {}
         query["batch_number"] = str(res["batch_number"])
@@ -100,8 +101,8 @@ def sync_inventories(result):
         res["batch_number"] = str(res["batch_number"])
         res["product_id"] = str(res["product_id"])
         res["store_id"] = str(res["store_id"])
-        p_ids.append(str(res["product_id"]))
-        store_ids.append(str(res["store_id"]))
+        new_data = str(res["product_id"]), str(res["store_id"])
+        product_store_map.append(new_data)
         res["panel"] = "cron"
         payload.append(UpdateOne(query, {"$set": res}, upsert=True))
     if payload:    

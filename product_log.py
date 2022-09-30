@@ -21,13 +21,13 @@ def product_log_check():
     cur.execute(Query1)
     sql_result1 = cur.fetchall()
     Query2 = "SELECT COUNT(*) FROM  pos.inventories;"
-    cur.execute(Query1)
+    cur.execute(Query2)
     sql_result2 = cur.fetchall()
     Query3 = "SELECT COUNT(*) FROM  pos.products;"
-    cur.execute(Query1)
+    cur.execute(Query3)
     sql_result3 = cur.fetchall()
     Query4 = "SELECT COUNT(*) FROM  pos.product_warehouse_stocks;"
-    cur.execute(Query1)
+    cur.execute(Query4)
     sql_result4 = cur.fetchall()
     # mongodb result
     mongo_result1=DB['product_store'].count()
