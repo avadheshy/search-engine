@@ -3,6 +3,35 @@ from constants import STORE_WH_MAP
 def group_autocomplete_stage(
     keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
 ):
+    search_terms_len = len(keyword.split(" "))
+    SEARCH_PIPE = []
+    if search_terms_len == 1:
+        SEARCH_PIPE = {'$search': {
+                'compound': {
+                    'should': [
+                        {
+                            'autocomplete': {
+                                'query': keyword,
+                                'path': 'name',
+                            },
+                        },
+                        {
+                            'autocomplete': {
+                                'query': keyword,
+                                'path': 'barcode',
+                            },
+                        },
+                    ],
+                },
+            }}
+    else:
+        SEARCH_PIPE = {'$search': {
+                            'text': {
+                                'query': keyword,
+                                'path': 'name',
+                            },
+                        }}
+
     is_mall = "0"
     if order_type == "mall":
         is_mall = "1"
@@ -15,30 +44,7 @@ def group_autocomplete_stage(
 
     if is_mall == "1":
         wh_id = STORE_WH_MAP.get(store_id)
-        PIPELINE = [
-                {'$search': {
-                'compound': {
-                    'should': [
-                        {
-                            'autocomplete': {
-                                'query': keyword,
-                                'path': 'name',
-                                'fuzzy': {
-                                    'maxEdits': 1,
-                                    'prefixLength': 0
-                                },
-                                "score": { "boost": { "value": 3}}
-                            },
-                        },
-                        {
-                            'autocomplete': {
-                                'query': keyword,
-                                'path': 'barcode',
-                            },
-                        },
-                    ],
-                },
-            }},
+        PIPELINE = SEARCH_PIPE + [
             {"$match": match_filter},
             {
                 '$lookup': {
@@ -138,6 +144,37 @@ def group_autocomplete_stage(
 def get_boosting_stage(
     keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
 ):
+    search_terms_len = len(keyword.split(" "))
+    SEARCH_PIPE = []
+
+    keyword = ' '.join(list(filter(lambda x : x not in ['rs', 'Rs', 'RS', 'rS'], keyword.split(" "))))
+
+    if search_terms_len == 1:
+        SEARCH_PIPE = [{'$search': {
+                'compound': {
+                    'should': [
+                        {
+                            'autocomplete': {
+                                'query': keyword,
+                                'path': 'name',
+                            },
+                        },
+                        {
+                            'autocomplete': {
+                                'query': keyword,
+                                'path': 'barcode',
+                            },
+                        },
+                    ],
+                },
+            }}]
+    else:
+        SEARCH_PIPE = [{'$search': {
+                            'text': {
+                                'query': keyword,
+                                'path': 'name',
+                            },
+                        }}]
     is_mall = "0"
     if order_type == "mall":
         is_mall = "1"
@@ -150,30 +187,7 @@ def get_boosting_stage(
 
     if is_mall == "1":
         wh_id = STORE_WH_MAP.get(store_id)
-        PIPELINE = [
-                {'$search': {
-                'compound': {
-                    'should': [
-                        {
-                            'autocomplete': {
-                                'query': keyword,
-                                'path': 'name',
-                                'fuzzy': {
-                                    'maxEdits': 1,
-                                    'prefixLength': 0
-                                },
-                                "score": { "boost": { "value": 3}}
-                            },
-                        },
-                        {
-                            'autocomplete': {
-                                'query': keyword,
-                                'path': 'barcode',
-                            },
-                        },
-                    ],
-                },
-            }},
+        PIPELINE = SEARCH_PIPE + [
             {"$match": match_filter},
             {
                 '$lookup': {
@@ -190,9 +204,7 @@ def get_boosting_stage(
                         {"$project": {"warehouse_id": 1, "stock": 1}}
                     ]
                 }},
-    
             {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"}}},
-            # {"$match": {"stock": {"$gt": 0}}},
             {"$sort": {"stock": -1}},
             {
                 "$facet": {
@@ -204,30 +216,7 @@ def get_boosting_stage(
 
     else:
 
-        PIPELINE = [
-                {'$search': {
-                'compound': {
-                    'should': [
-                        {
-                            'autocomplete': {
-                                'query': keyword,
-                                'path': 'name',
-                                'fuzzy': {
-                                    'maxEdits': 1,
-                                    'prefixLength': 0
-                                    },
-                                "score": { "boost": { "value": 3}}
-                            },
-                        },
-                        {
-                            'autocomplete': {
-                                'query': keyword,
-                                'path': 'barcode',
-                            },
-                        },
-                    ],
-                },
-            }},
+        PIPELINE = SEARCH_PIPE + [
             {"$match": match_filter},
             {
                 "$lookup": {
@@ -251,7 +240,6 @@ def get_boosting_stage(
             },
             {"$match": {"store.store_id": store_id}},
             {"$project": {"_id": 0, "id": 1, 'inv_qty': {"$first": "$store.inv_qty"}}},
-            # {"$match": {"inv_qty": {"$gt": 0}}},
             {"$sort": {"inv_qty": -1}},
             {
                 "$facet": {
