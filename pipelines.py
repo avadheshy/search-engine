@@ -147,8 +147,6 @@ def get_boosting_stage(
     search_terms_len = len(keyword.split(" "))
     SEARCH_PIPE = []
 
-    keyword = ' '.join(list(filter(lambda x : x not in ['rs', 'Rs', 'RS', 'rS'], keyword.split(" "))))
-
     if search_terms_len == 1:
         SEARCH_PIPE = [{'$search': {
                 'compound': {
@@ -169,6 +167,7 @@ def get_boosting_stage(
                 },
             }}]
     else:
+        keyword = ' '.join(list(filter(lambda x : x not in ['rs', 'Rs', 'RS', 'rS'], keyword.split(" "))))
         SEARCH_PIPE = [{'$search': {
                             'text': {
                                 'query': keyword,
