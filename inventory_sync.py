@@ -4,9 +4,10 @@ import json
 from mysql import connector
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne
-CLIENT = MongoClient(
-    "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
-)
+
+
+
+CLIENT = MongoClient("mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")
 DB = CLIENT.product_search
 current_time = datetime.now()
 prev_time = current_time - timedelta(hours=2)
