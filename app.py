@@ -6,8 +6,6 @@ from pipelines import get_boosting_stage
 from fastapi import FastAPI, Request, Query, HTTPException
 from typing import Optional, List
 from pymongo import MongoClient
-from new_pipeline import get_boosting_stage1
-
 
 
 sentry_sdk.init(
@@ -87,7 +85,7 @@ async def product_search(request: Request):
 
     # ...............REQUEST, RESPONSE, ERROR DB LOG ...................
 
-    DB["search_log_1"].insert_one(
+    DB["search_log_3"].insert_one(
         {"request": request_data, "response": response, "msg": error_message}
     )
 
@@ -337,14 +335,10 @@ def filter_product(
     }
     return ans
 
-
-# new test 
-
-@app.post("/v3/search")
-async def product_search(request: Request):
+@app.get('/v1/search')
+async def group_search(request: Request,order_type:str,store_id:str,keyword:str,platform:str,skip:str,limit:str):
     """
-    Product Search API, This will help to discover the relevant products
-    """
+    Product Search API, This will help to discover the relevant product groups"""
     # raise HTTPException(status_code=400, detail="Request is not accepted!")
     request_data = await request.json()
     response = {"total": 0, "data": []}
@@ -377,14 +371,6 @@ async def product_search(request: Request):
     except Exception as error:
         error_message = "{0}".format(error)
 
-    # ...............REQUEST, RESPONSE, ERROR DB LOG ...................
-
-    # DB["search_log_1"].insert_one(
-    #     {"request": request_data, "response": response, "msg": error_message}
-    # )
-
-    # ...................................................
 
     return response
-
 
