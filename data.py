@@ -102,7 +102,7 @@ CLIENT = MongoClient("mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@sear
 DB = CLIENT.product_search
      
 def fun():
-    ans = list(DB['product_store_sharded'].find({'name': None}, {'_id':0,'store_id':1,'product_id': 1}))
+    ans = list(DB['product_store_sharded'].find({'barcode': None}, {'_id':0,'store_id':1,'product_id': 1}))
     product_ids=[]
     store_ids=[]
     for i in ans:
@@ -152,6 +152,7 @@ def fun():
 #     cur2.execute(Query, (prev_time, prev_time,))
 #     result2 = cur2.fetchall()
 #     connection.close()
+
 
     
         

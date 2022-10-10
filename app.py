@@ -6,6 +6,10 @@ from pipelines import get_boosting_stage
 from fastapi import FastAPI, Request, Query, HTTPException
 from typing import Optional, List
 from pymongo import MongoClient
+from pipelines import get_boosting_stage, group_autocomplete_stage, get_pipeline_from_sharded_collection
+from constants import PAGE_SIZE
+
+import sentry_sdk
 
 
 sentry_sdk.init(
@@ -18,9 +22,8 @@ sentry_sdk.init(
 )
 
 app = FastAPI()
-CLIENT = MongoClient(
-    "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
-)
+CLIENT = MongoClient("mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")
+
 DB = CLIENT.product_search
 
 
@@ -66,13 +69,18 @@ async def product_search(request: Request):
         limit = int(request_data.get("limit")
                     ) if request_data.get("limit") else 10
 
+        
         # MongoDB Aggregation Pipeline
-        pipe_line = get_boosting_stage(
-            keyword, store_id, platform, order_type, skip, limit
-        )
+
 
         # DB Query
-        response = DB["search_products"].aggregate(pipe_line).next()
+        if order_type == 'mall':
+            pipe_line = get_boosting_stage(keyword, store_id, platform, order_type, skip, limit)
+
+            response = DB["search_products"].aggregate(pipe_line).next()
+        else:
+            pipe_line = get_pipeline_from_sharded_collection(keyword, store_id, platform, order_type, skip, limit)
+            response = DB["product_store_sharded"].aggregate(pipe_line).next()
 
         # Response Formatting
         response["data"] = (
@@ -355,7 +363,7 @@ async def group_search(request: Request,order_type:str,store_id:str,keyword:str,
                     ) if request_data.get("limit") else 10
 
         # MongoDB Aggregation Pipeline
-        pipe_line = get_boosting_stage1(
+        pipe_line = get_boosting_stage(
             keyword, store_id, platform, order_type, skip, limit
         )
 
