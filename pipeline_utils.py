@@ -41,56 +41,6 @@ CLIENT = MongoClient(
 )
 DB = CLIENT.product_search
 
-PIPE = [
-    {
-        '$project': {
-            '_id': 0, 
-            'product_id': 1, 
-            'store_id': 1, 
-            'quantity': {
-                '$toDouble': '$quantity'
-            }
-        }
-    }, {
-        '$group': {
-            '_id': {
-                'store_id': '$store_id', 
-                'product_id': '$product_id'
-            }, 
-            'data': {
-                '$push': '$$ROOT'
-            }
-        }
-    }, {
-        '$project': {
-            'store_id': '$_id.store_id', 
-            'product_id': '$_id.product_id', 
-            'inv_qty': {
-                '$sum': '$data.quantity'
-            }, 
-            '_id': 0
-        }
-    }
-]
-data = DB['inventories'].aggregate(PIPE)
-payload = []
-count = 1
-for i in data:
-	query = {'product_id': i.get('product_id'), 'store_id': i.get('store_id')}
-	payload.append(UpdateOne(query, {'$set': {'inv_qty': i.get('inv_qty')}}))
-	count = count + 1
-	if count % 30000 == 0:
-		DB['product_store'].bulk_write(payload)
-		print('count', count)
-		payload = []
-
-DB['product_store'].bulk_write(payload)
-
-
-
-
-
-
 
 import json
 from mysql import connector
