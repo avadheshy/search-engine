@@ -110,7 +110,7 @@ def sync_inventories(result):
         res["panel"] = "cron"
         payload.append(UpdateOne(query, {"$set": res}, upsert=True))
     DB["inventories"].bulk_write(payload)
-    INVENTORY_PIPELINE = [{"$match": {"store_id": {"$in": store_ids}, "product_id": {"$in": product_ids}}}]+ INVENTORY_COUNT
+    INVENTORY_PIPELINE = [{"$match": {"store_id": {"$in": store_ids}, "product_id": {"$in": p_ids}}}]+ INVENTORY_COUNT
     inventory_count = DB["inventories"].aggregate(INVENTORY_PIPELINE)
     update_product_payload = []
 

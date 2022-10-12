@@ -157,8 +157,7 @@ def get_boosting_stage(
                             "$match": {
                                 "$expr": {
                                     "$and": [
-                                        {"$eq": ["$product_id",
-                                                 "$$product_id"]},
+                                        {"$eq": ["$product_id","$$product_id"]},
                                         {"$eq": ["$store_id", store_id]},
                                     ]
                                 }
