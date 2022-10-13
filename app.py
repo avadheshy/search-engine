@@ -37,7 +37,7 @@ async def product_search(request: Request):
         # Request Parsing
         user_id = request_data.get("user_id")
         order_type = request_data.get("type")
-        store_id = request_data.get("store_id")  # mall / retail
+        store_id = request_data.get("store_id") # mall / retail
         keyword = request_data.get("keyword")
         platform = request_data.get("platform")  # pos / app
         skip = int(request_data.get("skip")) if request_data.get("skip") else 0

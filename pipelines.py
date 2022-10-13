@@ -6,7 +6,7 @@ GROUP_ADDITIONAL_STAGE = [
  {'$sort': {'inv_qty': -1}},
  {
         '$group': {
-            '_id': '$group_id', 
+            '_id': '$group_id',
             'count': {
                 '$sum': 1
             }
@@ -19,10 +19,11 @@ GROUP_ADDITIONAL_STAGE = [
         }
     }, {
         '$project': {
-            'id': '$_id', 
+            'id': '$_id',
             '_id': 0
         }
     }]
+
 
 def listing_pipeline(skip, limit, match_filter):
     return [
@@ -30,19 +31,19 @@ def listing_pipeline(skip, limit, match_filter):
         '$match': match_filter
     }, {
         '$project': {
-            '_id': 0, 
+            '_id': 0,
             'group_id': 1
         }
     }, {
         '$group': {
-            '_id': '$group_id', 
+            '_id': '$group_id',
             'count': {
                 '$sum': 1
             }
         }
     }, {
         '$project': {
-            'id': '$_id', 
+            'id': '$_id',
             '_id': 0
         }
     }, {
@@ -51,7 +52,7 @@ def listing_pipeline(skip, limit, match_filter):
                 {
                     '$count': 'count'
                 }
-            ], 
+            ],
             'data': [
                 {
                     '$skip': skip
@@ -62,6 +63,7 @@ def listing_pipeline(skip, limit, match_filter):
         }
     }
 ]
+
 
 def get_boosting_stage(
     keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
@@ -87,6 +89,13 @@ def get_boosting_stage(
                                     "path": "barcode",
                                 },
                             },
+                             {
+                                "autocomplete": {
+                                    "query": '1',
+                                    "path": "Winter_sell",
+                                    "score": {"constant": {"value": 3}}
+                                },
+                            }
                         ],
                     },
                 }
@@ -95,18 +104,32 @@ def get_boosting_stage(
     else:
         keyword = " ".join(
             list(
-                filter(lambda x: x not in ["rs", "Rs", "RS", "rS", 'kg', 'ml', 'gm'], keyword.split(" "))
+                filter(lambda x: x not in [
+                       "rs", "Rs", "RS", "rS", 'kg', 'ml', 'gm'], keyword.split(" "))
             )
         )
         SEARCH_PIPE = [
             {
                 "$search": {
-                    "text": {
-                        "query": keyword,
-                        "path": "name",
-                    },
+                    'compound': {
+                        'must': [{
+                            "text": {
+                            "query": keyword,
+                            "path": "name",
+                        }}
+                    ],
+                    'should': [{
+                            "text": {
+                                "query": '1',
+                                "path": "Winter_sell",
+                                "score": {"constant": {"value": 3}}
+                            },
+                        }]
+
+                    }
                 }
             }
+
         ]
     is_mall = "0"
     if order_type == "mall":
@@ -157,7 +180,8 @@ def get_boosting_stage(
                             "$match": {
                                 "$expr": {
                                     "$and": [
-                                        {"$eq": ["$product_id","$$product_id"]},
+                                        {"$eq": ["$product_id",
+                                            "$$product_id"]},
                                         {"$eq": ["$store_id", store_id]},
                                     ]
                                 }
@@ -197,6 +221,7 @@ def get_pipeline_from_sharded_collection(
                         "should": [
                             {"autocomplete": {"query": keyword, "path": "name"}},
                             {"autocomplete": {"query": keyword, "path": "barcode"}},
+                            {"autocomplete": {"query": '1',"path": "Winter_sell","score": {"constant": {"value": 3}}}}
                         ],
                         "minimumShouldMatch": 1,
                     }
@@ -207,7 +232,8 @@ def get_pipeline_from_sharded_collection(
         keyword = " ".join(
             list(
                 filter(
-                    lambda x: x not in ["rs", "Rs", "RS", "rS", "gm", "ml", "kg"],
+                    lambda x: x not in ["rs", "Rs",
+                        "RS", "rS", "gm", "ml", "kg"],
                     keyword.split(" "),
                 )
             )
@@ -219,7 +245,14 @@ def get_pipeline_from_sharded_collection(
                         "must": [
                             {"text": {"query": store_id, "path": "store_id"}},
                             {"text": {"query": keyword, "path": "name"}},
-                        ]
+                        ],
+                        'should':[{
+                            "text": {
+                                "query": '1',
+                                "path": "Winter_sell",
+                                "score": {"constant": {"value": 3}}
+                            },
+                        }]
                     }
                 }
             }
@@ -280,16 +313,19 @@ def get_pipeline_from_sharded_collection(
 def get_search_pipeline(keyword, store_id, platform, order_type, skip, limit):
     pipe_line = []
     if order_type == 'mall':
-        pipe_line = get_boosting_stage(keyword, store_id, platform, order_type, skip, limit)
+        pipe_line = get_boosting_stage(
+            keyword, store_id, platform, order_type, skip, limit)
     else:
-        pipe_line = get_pipeline_from_sharded_collection(keyword, store_id, platform, order_type, skip, limit)
+        pipe_line = get_pipeline_from_sharded_collection(
+            keyword, store_id, platform, order_type, skip, limit)
     return pipe_line
 
 
 def group_autocomplete_stage(
     keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
 ):
-    PIPELINE = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
-    NEW_GROUP_PIPELINE = PIPELINE[:-3] + GROUP_ADDITIONAL_STAGE + [PIPELINE[-1]]
+    PIPELINE = get_search_pipeline(
+        keyword, store_id, platform, order_type, skip, limit)
+    NEW_GROUP_PIPELINE = PIPELINE[:-3] +GROUP_ADDITIONAL_STAGE + [PIPELINE[-1]]
     print(NEW_GROUP_PIPELINE)
     return NEW_GROUP_PIPELINE
