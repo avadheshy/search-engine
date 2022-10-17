@@ -90,9 +90,8 @@ def get_boosting_stage(
                                 },
                             },
                              {
-                                "autocomplete": {
-                                    "query": '1',
-                                    "path": "Winter_sell",
+                                "exists": {
+                                    "path": "winter_sale",
                                     "score": {"constant": {"value": 3}}
                                 },
                             }
@@ -119,13 +118,11 @@ def get_boosting_stage(
                         }}
                     ],
                     'should': [{
-                            "text": {
-                                "query": '1',
-                                "path": "Winter_sell",
-                                "score": {"constant": {"value": 3}}
-                            },
-                        }]
-
+                                "exists": {
+                                    "path": "winter_sale",
+                                    "score": {"constant": {"value": 3}}
+                                },
+                            }]
                     }
                 }
             }
@@ -157,8 +154,8 @@ def get_boosting_stage(
                     ],
                 }
             },
-            {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"}}},
-            {"$sort": {"stock": -1}},
+            {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"},"score": { '$meta': "searchScore" }}},
+            {"$sort": {"stock": -1,'score':-1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
@@ -187,14 +184,14 @@ def get_boosting_stage(
                                 }
                             }
                         },
-                        {"$project": {"store_id": 1, "_id": 0, "inv_qty": 1}},
+                        {"$project": {"store_id": 1, "_id": 0, "inv_qty": 1,"score": { '$meta': "searchScore" }}},
                     ],
                     "as": "store",
                 }
             },
             {"$match": {"store.store_id": store_id}},
-            {"$project": {"_id": 0, "id": 1, "inv_qty": {"$first": "$store.inv_qty"}}},
-            {"$sort": {"inv_qty": -1}},
+            {"$project": {"_id": 0, "id": 1, "inv_qty": {"$first": "$store.inv_qty"}, "score":1}},
+            {"$sort": {"inv_qty": -1,'score':-1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
@@ -221,7 +218,12 @@ def get_pipeline_from_sharded_collection(
                         "should": [
                             {"autocomplete": {"query": keyword, "path": "name"}},
                             {"autocomplete": {"query": keyword, "path": "barcode"}},
-                            {"autocomplete": {"query": '1',"path": "Winter_sell","score": {"constant": {"value": 3}}}}
+                            {
+                                "exists": {
+                                    "path": "winter_sale",
+                                    "score": {"constant": {"value": 3}}
+                                }
+                            },
                         ],
                         "minimumShouldMatch": 1,
                     }
@@ -247,16 +249,15 @@ def get_pipeline_from_sharded_collection(
                             {"text": {"query": keyword, "path": "name"}},
                         ],
                         'should':[{
-                            "text": {
-                                "query": '1',
-                                "path": "Winter_sell",
-                                "score": {"constant": {"value": 3}}
-                            },
-                        }]
+                                "exists": {
+                                    "path": "winter_sale",
+                                    "score": {"constant": {"value": 3}}
+                                },
+                            }]
                     }
                 }
             }
-        ]
+        ]  
     match_filter = {}
     is_mall = "0"
     if order_type == "mall":
@@ -272,8 +273,8 @@ def get_pipeline_from_sharded_collection(
         match_filter["status"] = "1"
         PIPELINE = SEARCH_PIPE + [
             {"$match": match_filter},
-            {"$project": {"id": "$product_id", "inv_qty": 1, "_id": 0}},
-            {"$sort": {"inv_qty": -1}},
+            {"$project": {"id": "$product_id", "inv_qty": 1, "_id": 0,"score": { '$meta': "searchScore" }}},
+            {"$sort": {"inv_qty": -1,'score':-1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
@@ -298,8 +299,8 @@ def get_pipeline_from_sharded_collection(
                     ],
                 }
             },
-            {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"}}},
-            {"$sort": {"stock": -1}},
+            {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"},"score": { '$meta': "searchScore" }}},
+            {"$sort": {"stock": -1,'score':-1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
@@ -307,7 +308,7 @@ def get_pipeline_from_sharded_collection(
                 }
             },
         ]
-
+    print()
     return PIPELINE
 
 def get_search_pipeline(keyword, store_id, platform, order_type, skip, limit):
@@ -318,6 +319,7 @@ def get_search_pipeline(keyword, store_id, platform, order_type, skip, limit):
     else:
         pipe_line = get_pipeline_from_sharded_collection(
             keyword, store_id, platform, order_type, skip, limit)
+    
     return pipe_line
 
 

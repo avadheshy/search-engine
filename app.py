@@ -1,10 +1,13 @@
 import json
-from fastapi import FastAPI, Request, Query, HTTPException
+from fastapi import FastAPI, Request, Query, HTTPException,File, UploadFile
 from typing import Optional, List
-from pymongo import MongoClient
+from pymongo import MongoClient,UpdateOne,UpdateMany
 from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline
 from constants import PAGE_SIZE
-
+import csv
+from io import BytesIO
+import codecs
+from io import StringIO
 import sentry_sdk
 
 
@@ -22,6 +25,39 @@ CLIENT = MongoClient("mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@sear
 
 DB = CLIENT.product_search
 
+
+@app.post('/boost')
+async def product_boost(request: Request):
+    # file: UploadFile = File(...)
+    # request_data = await request.form()
+    # file = request.form
+    # print(file.filename)
+    # product_id = request_data.get("product_id")
+    
+    # csvReader = csv.DictReader(file.file, 'utf-8')
+    # product_ids = []
+    # for row in csvReader:
+    #     product_ids.append(row.get('PID'))
+    
+    # file.file.close()
+    request_data = await request.json()
+    product_ids=request_data.get('id')
+    payload1=[]
+    payload2=[]
+    for p_id in product_ids:
+        if p_id:
+            
+            payload1.append(UpdateOne({'id':p_id},{'$set':{'winter_sale':'1'}}))
+            payload2.append(UpdateMany({'product_id':p_id},{'$set':{'winter_sale':'1'}}))
+            
+    print(payload1)
+    print(payload2)
+    # if payload1:
+    #     DB['search_products'].bulk_write(payload1)
+    # if payload2:
+    #     DB['product_store_sharded'].bulk_write(payload2)
+    
+    return True
 
 
 @app.post("/v1/search")
@@ -44,6 +80,8 @@ async def product_search(request: Request):
         limit = int(request_data.get("limit")) if request_data.get("limit") else 10
         # DB Query
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
+        print(pipe_line)
+        
         if order_type == 'mall':
             response = DB["search_products"].aggregate(pipe_line).next()
         else:
@@ -60,12 +98,11 @@ async def product_search(request: Request):
 
     # ...............REQUEST, RESPONSE, ERROR DB LOG ...................
 
-    DB["search_log_3"].insert_one(
-        {"request": request_data, "response": response, "msg": error_message}
-    )
+    # DB["search_log_3"].insert_one(
+    #     {"request": request_data, "response": response, "msg": error_message}
+    # )
 
     # ...................................................
-
     return response
 
 @app.get("/v2/search")
@@ -150,3 +187,5 @@ def filter_product(request: Request):
     count = response["total"][0] if response["total"] else {}
     response["total"] = count.get("count") if count else 0
     return response
+
+ 
