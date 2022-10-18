@@ -1,3 +1,4 @@
+import codecs
 import json
 from fastapi import FastAPI, Request, Query, HTTPException,File, UploadFile
 from typing import Optional, List
@@ -6,7 +7,6 @@ from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pip
 from constants import PAGE_SIZE
 import csv
 from io import BytesIO
-import codecs
 from io import StringIO
 import sentry_sdk
 
@@ -27,37 +27,50 @@ DB = CLIENT.product_search
 
 
 @app.post('/boost')
-async def product_boost(request: Request):
-    # file: UploadFile = File(...)
-    # request_data = await request.form()
-    # file = request.form
-    # print(file.filename)
-    # product_id = request_data.get("product_id")
+async def add_booster(file: UploadFile = File(...)):
+    print(file)
+    data = csv.DictReader(codecs.iterdecode(file.file, 'utf-8'))
+    return list(data)
+    # print(data)
+    # new_data = []
+    # for d in data:
+    #     new_data.append(d)
+    # return new_data
+    # file_obj = files.file
+    # timestamp = str(int(datetime.timestamp(datetime.now())))
+    # upload_file_name = '/tmp/' + timestamp + files.filename
+    # async with aiofiles.open(upload_file_name, 'wb+') as temp_file:
+    #     content = await files.read()
+    #     temp_file.write(content)
+    #     # for chunk in files.:
+    #     #     temp_file.write(chunk)
+    # print(temp_file)
+    # async with aiofiles.open(file_obj, 'r') as file:
+    #     contents = await file.read()
+    # file_data = csv.DictReader(contents)
+    # print(file_data, "Files ")
+    # for row in file_data:
+    #     c = 1
+    #     print("HEYYY")  
+    #     # key = row['Id']  # Assuming a column named 'Id' to be the primary key
+    #     # data[key] = row  
+    #     print(row)
+    #     break
+    # print(c)
+    # # data = {}
+    # # contents = files.file.read()
+    # # buffer = StringIO(contents.decode('utf-8'))
+    # # csvReader = csv.DictReader(buffer)
+    # # for row in file_data:
+    # #     print("HEYYY")  
+    # #     # key = row['Id']  # Assuming a column named 'Id' to be the primary key
+    # #     # data[key] = row  
+    # #     print(row)
+    # #     break
     
-    # csvReader = csv.DictReader(file.file, 'utf-8')
-    # product_ids = []
-    # for row in csvReader:
-    #     product_ids.append(row.get('PID'))
-    
-    # file.file.close()
-    request_data = await request.json()
-    product_ids=request_data.get('id')
-    payload1=[]
-    payload2=[]
-    for p_id in product_ids:
-        if p_id:
-            
-            payload1.append(UpdateOne({'id':p_id},{'$set':{'winter_sale':'1'}}))
-            payload2.append(UpdateMany({'product_id':p_id},{'$set':{'winter_sale':'1'}}))
-            
-    print(payload1)
-    print(payload2)
-    # if payload1:
-    #     DB['search_products'].bulk_write(payload1)
-    # if payload2:
-    #     DB['product_store_sharded'].bulk_write(payload2)
-    
-    return True
+    # # buffer.close()
+    # # files.file.close()
+    # return True
 
 
 @app.post("/v1/search")
