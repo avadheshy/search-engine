@@ -1,15 +1,13 @@
 import codecs
 import json
-from fastapi import FastAPI, Request, Query, HTTPException,File, UploadFile
-from typing import Optional, List
-from pymongo import MongoClient,UpdateOne,UpdateMany
+from fastapi import FastAPI, Request, Query, HTTPException, File, UploadFile
+from pymongo import MongoClient, UpdateOne, UpdateMany
 from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline
 from constants import PAGE_SIZE
 import csv
 from io import BytesIO
 from io import StringIO
 import sentry_sdk
-
 
 sentry_sdk.init(
     # dsn="https://fa760c10052c4da88ba731dc48c9020e@o1194835.ingest.sentry.io/6768729",
@@ -27,50 +25,23 @@ DB = CLIENT.product_search
 
 
 @app.post('/boost')
-async def add_booster(file: UploadFile = File(...)):
-    print(file)
-    data = csv.DictReader(codecs.iterdecode(file.file, 'utf-8'))
-    return list(data)
-    # print(data)
-    # new_data = []
-    # for d in data:
-    #     new_data.append(d)
-    # return new_data
-    # file_obj = files.file
-    # timestamp = str(int(datetime.timestamp(datetime.now())))
-    # upload_file_name = '/tmp/' + timestamp + files.filename
-    # async with aiofiles.open(upload_file_name, 'wb+') as temp_file:
-    #     content = await files.read()
-    #     temp_file.write(content)
-    #     # for chunk in files.:
-    #     #     temp_file.write(chunk)
-    # print(temp_file)
-    # async with aiofiles.open(file_obj, 'r') as file:
-    #     contents = await file.read()
-    # file_data = csv.DictReader(contents)
-    # print(file_data, "Files ")
-    # for row in file_data:
-    #     c = 1
-    #     print("HEYYY")  
-    #     # key = row['Id']  # Assuming a column named 'Id' to be the primary key
-    #     # data[key] = row  
-    #     print(row)
-    #     break
-    # print(c)
-    # # data = {}
-    # # contents = files.file.read()
-    # # buffer = StringIO(contents.decode('utf-8'))
-    # # csvReader = csv.DictReader(buffer)
-    # # for row in file_data:
-    # #     print("HEYYY")  
-    # #     # key = row['Id']  # Assuming a column named 'Id' to be the primary key
-    # #     # data[key] = row  
-    # #     print(row)
-    # #     break
-    
-    # # buffer.close()
-    # # files.file.close()
-    # return True
+async def add_booster(request: Request, file: UploadFile = File(...)):
+    csvReader = csv.DictReader(codecs.iterdecode(file.file, 'utf-8'))
+    product_ids = []
+    for rows in csvReader:
+        print('hello')
+        product_ids.append(rows.get('PID'))
+    payload1 = []
+    payload2 = []
+    for product_id in product_ids:
+        payload1.append(UpdateOne({'id': product_id}, {'$set': {'winter_sale': 1}}))
+        payload1.append(UpdateMany({'id': product_id}, {'$set': {'winter_sale': 1}}))
+    print(len(payload1))
+    # if payload1:
+    #     DB['search_products'].bulk_write(payload1)
+    # if payload2:
+    #     DB['product_store_sharded'].bulk_write(payload2)
+    return True
 
 
 @app.post("/v1/search")
@@ -86,7 +57,7 @@ async def product_search(request: Request):
         # Request Parsing
         user_id = request_data.get("user_id")
         order_type = request_data.get("type")
-        store_id = request_data.get("store_id") # mall / retail
+        store_id = request_data.get("store_id")  # mall / retail
         keyword = request_data.get("keyword")
         platform = request_data.get("platform")  # pos / app
         skip = int(request_data.get("skip")) if request_data.get("skip") else 0
@@ -94,7 +65,7 @@ async def product_search(request: Request):
         # DB Query
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
         print(pipe_line)
-        
+
         if order_type == 'mall':
             response = DB["search_products"].aggregate(pipe_line).next()
         else:
@@ -118,6 +89,7 @@ async def product_search(request: Request):
     # ...................................................
     return response
 
+
 @app.get("/v2/search")
 def product_search(request: Request):
     """
@@ -129,8 +101,8 @@ def product_search(request: Request):
     error_message = ""
     # Request Parsing
     user_id = request_data.get("user_id")
-    order_type = request_data.get("type") # mall / retail
-    store_id = request_data.get("store_id")  
+    order_type = request_data.get("type")  # mall / retail
+    store_id = request_data.get("store_id")
     keyword = request_data.get("keyword")
     platform = request_data.get("platform")  # pos / app
     skip = int(request_data.get("skip")) if request_data.get("skip") else 0
@@ -170,7 +142,6 @@ def store_warehouse_map(request: Request):
     return WAREHOUSE_KIRANA_MAP
 
 
-
 @app.get("/v1/products")
 def filter_product(request: Request):
     request_data = dict(request.query_params.items())
@@ -195,10 +166,8 @@ def filter_product(request: Request):
 
     response = DB['product_store_sharded'].aggregate(LISTING_PIPELINE).next()
     response["data"] = (
-            [i.get("id") for i in response["data"]] if response["data"] else []
-        )
+        [i.get("id") for i in response["data"]] if response["data"] else []
+    )
     count = response["total"][0] if response["total"] else {}
     response["total"] = count.get("count") if count else 0
     return response
-
- 

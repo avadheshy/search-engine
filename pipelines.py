@@ -308,7 +308,6 @@ def get_pipeline_from_sharded_collection(
                 }
             },
         ]
-    print()
     return PIPELINE
 
 def get_search_pipeline(keyword, store_id, platform, order_type, skip, limit):
@@ -331,3 +330,4 @@ def group_autocomplete_stage(
     NEW_GROUP_PIPELINE = PIPELINE[:-3] +GROUP_ADDITIONAL_STAGE + [PIPELINE[-1]]
     print(NEW_GROUP_PIPELINE)
     return NEW_GROUP_PIPELINE
+
