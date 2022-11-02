@@ -291,5 +291,5 @@ def group_autocomplete_stage(
 ):
     PIPELINE = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
     NEW_GROUP_PIPELINE = PIPELINE[:-3] + GROUP_ADDITIONAL_STAGE + [PIPELINE[-1]]
-    print(NEW_GROUP_PIPELINE)
+    # print(NEW_GROUP_PIPELINE)
     return NEW_GROUP_PIPELINE

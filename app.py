@@ -60,7 +60,7 @@ async def product_search(request: Request):
 
     # ...............REQUEST, RESPONSE, ERROR DB LOG ...................
 
-    DB["search_log_3"].insert_one(
+    DB["search_log_5"].insert_one(
         {"request": request_data, "response": response, "msg": error_message}
     )
 
@@ -69,7 +69,7 @@ async def product_search(request: Request):
     return response
 
 @app.get("/v2/search")
-def product_search(request: Request):
+def product_search_v2(request: Request):
     """
     Product Search API, This will help to discover the relevant products
     """
@@ -92,16 +92,19 @@ def product_search(request: Request):
     )
 
     # DB Query
-    response = DB["product_store_sharded"].aggregate(pipe_line).next()
+    if order_type == 'mall':
+        response = DB["search_products"].aggregate(pipe_line).next()
+    else:
+        response = DB["product_store_sharded"].aggregate(pipe_line).next()
 
     # Response Formatting
     response["data"] = (
-        [i.get("id") for i in response["data"]] if response["data"] else []
+        [str(i.get("id")) for i in response["data"]] if response["data"] else []
     )
     count = response["total"][0] if response["total"] else {}
     response["total"] = count.get("count") if count else 0
 
-    DB["group_log_1"].insert_one(
+    DB["group_log_2"].insert_one(
         {"request": request_data, "response": response}
     )
 
