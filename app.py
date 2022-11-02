@@ -114,6 +114,7 @@ def product_search(request: Request):
     )
 
     # DB Query
+    print(pipe_line)
     response = DB["product_store_sharded"].aggregate(pipe_line).next()
 
     # Response Formatting
