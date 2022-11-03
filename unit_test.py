@@ -1,8 +1,7 @@
 import unittest
 from constants import STORE_WH_MAP
-from pymongo import MongoClient,UpdateMany,UpdateOne
-CLIENT = MongoClient("mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")
-DB = CLIENT.product_search
+from pymongo import  UpdateOne, UpdateMany
+from app import DB
 def fun():
     data=list(DB['products'].aggregate([{'$project':{'id':1,'_id':0,'name':1,'barcode':1,'status':1,'sale_app':1,'sale_pos':1}}]))
     payload=[]

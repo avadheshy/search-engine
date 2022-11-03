@@ -19,7 +19,8 @@ sentry_sdk.init(
 )
 
 app = FastAPI()
-CLIENT = MongoClient("mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")
+CLIENT = MongoClient(
+    "mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")
 
 DB = CLIENT.product_search
 
@@ -34,8 +35,10 @@ async def add_booster(request: Request, file: UploadFile = File(...)):
     payload1 = []
     payload2 = []
     for product_id in product_ids:
-        payload1.append(UpdateOne({'id': product_id}, {'$set': {'winter_sale': 1}}))
-        payload1.append(UpdateMany({'id': product_id}, {'$set': {'winter_sale': 1}}))
+        payload1.append(UpdateOne({'id': product_id}, {
+                        '$set': {'winter_sale': 1}}))
+        payload1.append(UpdateMany({'id': product_id}, {
+                        '$set': {'winter_sale': 1}}))
     print(len(payload1))
     # if payload1:
     #     DB['search_products'].bulk_write(payload1)
@@ -61,9 +64,11 @@ async def product_search(request: Request):
         keyword = request_data.get("keyword")
         platform = request_data.get("platform")  # pos / app
         skip = int(request_data.get("skip")) if request_data.get("skip") else 0
-        limit = int(request_data.get("limit")) if request_data.get("limit") else 10
+        limit = int(request_data.get("limit")
+                    ) if request_data.get("limit") else 10
         # DB Query
-        pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
+        pipe_line = get_search_pipeline(
+            keyword, store_id, platform, order_type, skip, limit)
         print(pipe_line)
 
         if order_type == 'mall':
@@ -143,27 +148,30 @@ def store_warehouse_map(request: Request):
     return WAREHOUSE_KIRANA_MAP
 
 
-@app.get("/v1/products")
+@app.get("/v3/product_listing")
 def filter_product(request: Request):
     request_data = dict(request.query_params.items())
+    filters_for=request_data.get('filters_for')
+    filters_for_id=request_data.get('filters_for_id')
     category_ids = request_data.get('category_ids')
     brand_ids = request_data.get('brand_ids')
     store_id = request_data.get('store_id')
+    sort_by = request_data.get('sort_by')
     user_id = request_data.get("user_id")
-    order_type = request_data.get("type")
-    platform = request_data.get("platform")
+    type = request_data.get("type")
+    # platform = request_data.get("platform")
     skip = int(request_data.get('skip') or 0)
     limit = int(request_data.get('limit') or 10)
 
-    match_filter = {'store_id': store_id}
-    if category_ids:
-        category_ids = json.loads(category_ids)
-        match_filter['category_id'] = {'$in': category_ids}
-    if brand_ids:
-        brand_ids = json.loads(brand_ids)
-        match_filter['brand_id'] = {'$in': brand_ids}
+    # match_filter = {'store_id': store_id}
+    # if category_ids:
+    #     category_ids = json.loads(category_ids)
+    #     match_filter['category_id'] = {'$in': category_ids}
+    # if brand_ids:
+    #     brand_ids = json.loads(brand_ids)
+    #     match_filter['brand_id'] = {'$in': brand_ids}
 
-    LISTING_PIPELINE = listing_pipeline(skip, limit, match_filter)
+    LISTING_PIPELINE = listing_pipeline(filters_for,filters_for_id,store_id,type, brand_ids,category_ids,sort_by,skip, limit)
 
     response = DB['product_store_sharded'].aggregate(LISTING_PIPELINE).next()
     response["data"] = (

@@ -2,7 +2,8 @@ import csv
 from email.mime import image
 import json
 import base64
-from pymongo import MongoClient, UpdateOne
+from pymongo import UpdateOne
+from app import DB
 #
 # data_map = {
 #     "Uniq Id": "product_id",
@@ -12,10 +13,7 @@ from pymongo import MongoClient, UpdateOne
 # }
 #
 #
-# CLIENT = MongoClient(
-#     "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
-# )
-# DB = CLIENT.search_engine
+
 #
 #
 # def insert_file_data_products(collection_name, file_path):
