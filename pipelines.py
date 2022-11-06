@@ -25,44 +25,186 @@ GROUP_ADDITIONAL_STAGE = [
     }]
 
 
-def listing_pipeline(filters_for, filters_for_id, store_id, type, brand_ids, category_ids, sort_by, skip, limit):
+def listing_pipeline_mall(filters_for, filters_for_id, store_id, brand_ids, category_ids, sort_by, skip, limit):
+    wh_id = STORE_WH_MAP.get(store_id)
     match_filter = {}
     sort_query = {}
-    if type and type == 'mall':
-        match_filter['is_mall'] = "1"
-    else:
-        match_filter['is_mall'] = "0"
+    match_filter['is_mall'] = "1"
+    match_filter['status']="1"
+    
+    #filter for category ids
     if category_ids:
+        category_ids=list(map(int,category_ids))
         match_filter['category_id'] = {'$in': category_ids}
+    #filter for brand ids
     if brand_ids:
+        brand_ids=list(map(int,brand_ids))
         match_filter['brand_id'] = {'$in': brand_ids}
-
-    if sort_by:
-        if sort_by == 'max_price':
+    if filters_for=='cl1':
+        match_filter['cat_level']='1'
+        match_filter["category_id"]=int(filters_for_id)
+    elif filters_for=='cl2':
+        match_filter['cat_level']='2'
+        match_filter["category_id"]=int(filters_for_id)
+    elif filters_for=='cl3':
+        match_filter['cat_level']='3'
+        match_filter["category_id"]=int(filters_for_id)
+    elif filters_for=='cl4':
+        match_filter['cat_level']='4'
+        match_filter["category_id"]=int(filters_for_id)
+    elif filters_for =='brand':
+        match_filter["brand_id"]=filters_for_id
+    elif filters_for=='category':
+        match_filter["category_id"]=int(filters_for_id)
+    elif filters_for=='group':
+        match_filter['group_id']=int(filters_for_id)
+    elif filters_for=='tag':
+        match_filter['tags']={'$in':[filters_for_id]}
+    #sorting based on given name
+    if sort_by == 'max_price':
             sort_query['price'] = -1
-        elif sort_by == 'min_price':
-            sort_query['price'] = 1
-        elif sort_by == 'new':
-            sort_query['updated_at'] = -1
-    else:
+    elif sort_by == 'min_price':
+        sort_query['price'] = 1
+    elif sort_by == 'new':
+        sort_query['updated_at'] = -1
+    elif sort_by=='relevance':
         sort_query['score'] = {"$meta": "textScore"}
+    else:
+        sort_query['created_at'] = -1
 
     return [
         {
             '$match': match_filter
-        }, {
+        },
+         {
+            "$lookup": {
+                    "from": "product_warehouse_stocks",
+                    "localField": "id",
+                    "foreignField": "product_id",
+                    "as": "data",
+                    "pipeline": [
+                        {"$match": {"warehouse_id": wh_id}},
+                    ],
+                }
+            },
+        {
             '$project': {
                 '_id': 0,
                 'id': 1,
-                'price': {'$toDecimal': "$price"},
+                'price':1,
                 'updated_at': 1,
+                'created_at':1,
+                'category_id':1,
+                'group_id':1,
+                'brand_id':1
             }
         },
 
-        {'sort': sort_query},
+        {'$sort': sort_query},
         {
             '$project': {
                 'id': 1,
+                '_id': 0
+            }
+        },
+        {
+            '$facet': {
+                'total': [
+                    {
+                        '$count': 'count'
+                    }
+                ],
+                'data': [
+                    {
+                        '$skip': skip
+                    }, {
+                        '$limit': limit
+                    }
+                ]
+            }
+        }
+    ]
+
+
+def listing_pipeline_retail(filters_for, filters_for_id, store_id, brand_ids, category_ids, sort_by, skip, limit):
+    match_filter = {}
+    sort_query = {}
+    match_filter['is_mall'] = "0"
+    match_filter['status']="1"
+    
+    #filter for category ids
+    if category_ids:
+        category_ids=list(map(int,category_ids))
+        match_filter['category_id'] = {'$in': category_ids}
+    #filter for brand ids
+    if brand_ids:
+        brand_ids=list(map(int,brand_ids))
+        match_filter['brand_id'] = {'$in': brand_ids}
+    if filters_for=='cl1':
+        match_filter['cat_level']='1'
+        match_filter["category_id"]=int(filters_for_id)
+    elif filters_for=='cl2':
+        match_filter['cat_level']='2'
+        match_filter["category_id"]=int(filters_for_id)
+    elif filters_for=='cl3':
+        match_filter['cat_level']='3'
+        match_filter["category_id"]=int(filters_for_id)
+    elif filters_for=='cl4':
+        match_filter['cat_level']='4'
+        match_filter["category_id"]=int(filters_for_id)
+    elif filters_for =='brand':
+        match_filter["brand_id"]=filters_for_id
+    elif filters_for=='category':
+        match_filter["category_id"]=int(filters_for_id)
+    elif filters_for=='group':
+        match_filter['group_id']=int(filters_for_id)
+    elif filters_for=='tag':
+        match_filter['tags']={'$in':[filters_for_id]}
+    #sorting based on given name
+    if sort_by == 'max_price':
+            sort_query['price'] = -1
+    elif sort_by == 'min_price':
+        sort_query['price'] = 1
+    elif sort_by == 'new':
+        sort_query['updated_at'] = -1
+    elif sort_by=='relevance':
+        sort_query['score'] = {"$meta": "textScore"}
+    else:
+        sort_query['created_at'] = -1
+
+    return [
+        {
+            '$match': match_filter
+        },
+         {
+            "$lookup": {
+                    "from": "product_store",
+                    "localField": "id",
+                    "foreignField": "product_id",
+                    "as": "data",
+                    "pipeline": [
+                        {"$match": {"store_id": store_id}},
+                    ],
+                }
+            },
+        {
+            '$project': {
+                '_id': 0,
+                'id': 1,
+                'price':{'$toDecimal':'$price'},
+                'updated_at': 1,
+                'created_at':1,
+                'category_id':1,
+                'group_id':1,
+                'brand_id':1
+            }
+        },
+
+        {'$sort': sort_query},
+        {
+            '$project': {
+                'id': 1,
+                'price':1,
                 '_id': 0
             }
         },
@@ -222,7 +364,6 @@ def get_boosting_stage(
                 }
             },
         ]
-    print(PIPELINE)
     return PIPELINE
 
 
@@ -355,5 +496,5 @@ def group_autocomplete_stage(
         keyword, store_id, platform, order_type, skip, limit)
     NEW_GROUP_PIPELINE = PIPELINE[:-3] + \
         GROUP_ADDITIONAL_STAGE + [PIPELINE[-1]]
-    print(NEW_GROUP_PIPELINE)
+    # print(NEW_GROUP_PIPELINE)
     return NEW_GROUP_PIPELINE

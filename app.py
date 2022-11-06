@@ -2,7 +2,7 @@ import codecs
 import json
 from fastapi import FastAPI, Request, Query, HTTPException, File, UploadFile
 from pymongo import MongoClient, UpdateOne, UpdateMany
-from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline
+from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline_mall,listing_pipeline_retail
 from constants import PAGE_SIZE
 import csv
 from io import BytesIO
@@ -23,6 +23,7 @@ CLIENT = MongoClient(
     "mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")
 
 DB = CLIENT.product_search
+db=CLIENT.search
 
 
 @app.post('/boost')
@@ -87,16 +88,16 @@ async def product_search(request: Request):
 
     # ...............REQUEST, RESPONSE, ERROR DB LOG ...................
 
-    # DB["search_log_3"].insert_one(
-    #     {"request": request_data, "response": response, "msg": error_message}
-    # )
+    DB["search_log_5"].insert_one(
+        {"request": request_data, "response": response, "msg": error_message}
+    )
 
     # ...................................................
     return response
 
 
 @app.get("/v2/search")
-def product_search(request: Request):
+def product_search_v2(request: Request):
     """
     Product Search API, This will help to discover the relevant products
     """
@@ -117,19 +118,22 @@ def product_search(request: Request):
     pipe_line = group_autocomplete_stage(
         keyword, store_id, platform, order_type, skip, limit
     )
+    print(pipe_line)
 
     # DB Query
-    print(pipe_line)
-    response = DB["product_store_sharded"].aggregate(pipe_line).next()
+    if order_type == 'mall':
+        response = DB["search_products"].aggregate(pipe_line).next()
+    else:
+        response = DB["product_store_sharded"].aggregate(pipe_line).next()
 
     # Response Formatting
     response["data"] = (
-        [i.get("id") for i in response["data"]] if response["data"] else []
+        [str(i.get("id")) for i in response["data"]] if response["data"] else []
     )
     count = response["total"][0] if response["total"] else {}
     response["total"] = count.get("count") if count else 0
 
-    DB["group_log_1"].insert_one(
+    DB["group_log_2"].insert_one(
         {"request": request_data, "response": response}
     )
 
@@ -159,21 +163,19 @@ def filter_product(request: Request):
     sort_by = request_data.get('sort_by')
     user_id = request_data.get("user_id")
     type = request_data.get("type")
-    # platform = request_data.get("platform")
-    skip = int(request_data.get('skip') or 0)
-    limit = int(request_data.get('limit') or 10)
-
-    # match_filter = {'store_id': store_id}
-    # if category_ids:
-    #     category_ids = json.loads(category_ids)
-    #     match_filter['category_id'] = {'$in': category_ids}
-    # if brand_ids:
-    #     brand_ids = json.loads(brand_ids)
-    #     match_filter['brand_id'] = {'$in': brand_ids}
-
-    LISTING_PIPELINE = listing_pipeline(filters_for,filters_for_id,store_id,type, brand_ids,category_ids,sort_by,skip, limit)
-
-    response = DB['product_store_sharded'].aggregate(LISTING_PIPELINE).next()
+    page = request_data.get("page",0) 
+    skip = (int(page)-1)*10
+    limit = int(page)*10
+    response=[]
+    if type=='mall':
+        LISTING_PIPELINE=listing_pipeline_mall(filters_for,filters_for_id,store_id, brand_ids,category_ids,sort_by,skip, limit)
+        print(LISTING_PIPELINE)
+        response = db['list_product'].aggregate(LISTING_PIPELINE).next()
+    else:
+        LISTING_PIPELINE = listing_pipeline_retail(filters_for,filters_for_id,store_id, brand_ids,category_ids,sort_by,skip, limit)
+        print(LISTING_PIPELINE)
+        response = db['list_product'].aggregate(LISTING_PIPELINE).next()
+    
     response["data"] = (
         [i.get("id") for i in response["data"]] if response["data"] else []
     )

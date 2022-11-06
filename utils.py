@@ -277,6 +277,78 @@ def get_pipeline(
     return PIPELINE
 
 get_pipeline(keyword='rice')
+for i in range(1,170000,10000):
+    ids=list(map(str,range(i,i+10000)))
+
+    pipeline=[
+    {'$match':{'id':{'$in':ids}}},
+    {
+        '$lookup': {
+            'from': 'product_tag', 
+            'localField': 'id', 
+            'foreignField': 'product_id', 
+            'as': 'data'
+        }
+    }, {
+        '$project': {
+            'id': 1, 
+            'name': 1, 
+            'group_id': 1, 
+            'mrp': 1, 
+            'price': 1, 
+            'barcode': 1, 
+            'status': 1, 
+            'sale_app': 1, 
+            'sale_pos': 1, 
+            'is_mall': 1, 
+            'updated_at': 1, 
+            'brand_id': 1, 
+            'category_id': {
+                '$toString': '$category_id'
+            }, 
+            'chain_id': 1, 
+            'created_at': 1, 
+            'tags': '$data.tag_id'
+        }
+    }, {
+        '$lookup': {
+            'from': 'all_categories', 
+            'localField': 'category_id', 
+            'foreignField': 'id', 
+            'as': 'data'
+        }
+    }, {
+        '$unwind': {
+            'path': '$data'
+        }
+    }, {
+        '$project': {
+            'id': 1, 
+            'name': 1, 
+            'group_id': 1, 
+            'mrp': 1, 
+            'price': 1, 
+            'barcode': 1, 
+            'status': 1, 
+            'sale_app': 1, 
+            'sale_pos': 1, 
+            'is_mall': 1, 
+            'updated_at': 1, 
+            'brand_id': 1, 
+            'category_id': {
+                '$toInt': '$category_id'
+            }, 
+            'created_at': 1, 
+            'tags': 1, 
+            'cat_level': '$data.cat_level'
+        }
+    }
+    ]
+    payload=list(DB['search_products'].aggregate(pipeline))
+    if payload:
+        DB['list_products'].insert_many(payload)
+    print(i)
+    print(len(payload))
     
     
 
