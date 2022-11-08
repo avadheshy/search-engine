@@ -25,21 +25,21 @@ GROUP_ADDITIONAL_STAGE = [
     }]
 
 
-def listing_pipeline_mall(filters_for, filters_for_id, store_id, brand_ids, category_ids, sort_by, skip, limit):
+def listing_pipeline_mall(filters_for,filters_for_id,store_id, brandIds,categories,sort_by,skip, limit):
     wh_id = STORE_WH_MAP.get(store_id)
     match_filter = {}
     sort_query = {}
     match_filter['is_mall'] = "1"
-    match_filter['status']="1"
+    match_filter['status']=1
     
     #filter for category ids
-    if category_ids:
-        category_ids=list(map(int,category_ids))
-        match_filter['category_id'] = {'$in': category_ids}
+    if categories:
+        categories=list(map(int,categories))
+        match_filter['category_id'] = {'$in': categories}
     #filter for brand ids
-    if brand_ids:
-        brand_ids=list(map(int,brand_ids))
-        match_filter['brand_id'] = {'$in': brand_ids}
+    if brandIds:
+        brandIds=list(map(int,brandIds))
+        match_filter['brand_id'] = {'$in': brandIds}
     if filters_for=='cl1':
         match_filter['cat_level']='1'
         match_filter["category_id"]=int(filters_for_id)
@@ -53,16 +53,16 @@ def listing_pipeline_mall(filters_for, filters_for_id, store_id, brand_ids, cate
         match_filter['cat_level']='4'
         match_filter["category_id"]=int(filters_for_id)
     elif filters_for =='brand':
-        match_filter["brand_id"]=filters_for_id
+        match_filter["brand_id"]=int(filters_for_id)
     elif filters_for=='category':
         match_filter["category_id"]=int(filters_for_id)
     elif filters_for=='group':
         match_filter['group_id']=int(filters_for_id)
     elif filters_for=='tag':
-        match_filter['tags']={'$in':[filters_for_id]}
+        match_filter['tags']=filters_for_id
     #sorting based on given name
     if sort_by == 'max_price':
-            sort_query['price'] = -1
+        sort_query['price'] = -1
     elif sort_by == 'min_price':
         sort_query['price'] = 1
     elif sort_by == 'new':
@@ -104,6 +104,10 @@ def listing_pipeline_mall(filters_for, filters_for_id, store_id, brand_ids, cate
         {
             '$project': {
                 'id': 1,
+                'group_id':1,
+                'brand_id':1,
+                'category_id':1,
+                
                 '_id': 0
             }
         },
@@ -126,20 +130,20 @@ def listing_pipeline_mall(filters_for, filters_for_id, store_id, brand_ids, cate
     ]
 
 
-def listing_pipeline_retail(filters_for, filters_for_id, store_id, brand_ids, category_ids, sort_by, skip, limit):
+def listing_pipeline_retail(filters_for,filters_for_id,store_id, brandIds,categories,sort_by,skip, limit):
     match_filter = {}
     sort_query = {}
     match_filter['is_mall'] = "0"
-    match_filter['status']="1"
+    match_filter['status']=1
     
     #filter for category ids
-    if category_ids:
-        category_ids=list(map(int,category_ids))
-        match_filter['category_id'] = {'$in': category_ids}
+    if categories:
+        categories=list(map(int,categories))
+        match_filter['category_id'] = {'$in': categories}
     #filter for brand ids
-    if brand_ids:
-        brand_ids=list(map(int,brand_ids))
-        match_filter['brand_id'] = {'$in': brand_ids}
+    if brandIds:
+        brandIds=list(map(int,brandIds))
+        match_filter['brand_id'] = {'$in': brandIds}
     if filters_for=='cl1':
         match_filter['cat_level']='1'
         match_filter["category_id"]=int(filters_for_id)
@@ -153,13 +157,13 @@ def listing_pipeline_retail(filters_for, filters_for_id, store_id, brand_ids, ca
         match_filter['cat_level']='4'
         match_filter["category_id"]=int(filters_for_id)
     elif filters_for =='brand':
-        match_filter["brand_id"]=filters_for_id
+        match_filter["brand_id"]=int(filters_for_id)
     elif filters_for=='category':
         match_filter["category_id"]=int(filters_for_id)
     elif filters_for=='group':
         match_filter['group_id']=int(filters_for_id)
     elif filters_for=='tag':
-        match_filter['tags']={'$in':[filters_for_id]}
+        match_filter['tags']=filters_for_id
     #sorting based on given name
     if sort_by == 'max_price':
             sort_query['price'] = -1
@@ -204,7 +208,9 @@ def listing_pipeline_retail(filters_for, filters_for_id, store_id, brand_ids, ca
         {
             '$project': {
                 'id': 1,
-                'price':1,
+                'group_id':1,
+                'brand_id':1,
+                'category_id':1,
                 '_id': 0
             }
         },

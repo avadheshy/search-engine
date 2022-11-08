@@ -1,4 +1,5 @@
 # Collection Name: inventories
+from app import DB
 INVENTORY_COUNT = [
     {
         '$project': {
@@ -36,20 +37,14 @@ from pymongo import UpdateOne, MongoClient
 
 
 
-CLIENT = MongoClient(
-    "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
-)
-DB = CLIENT.product_search
+
 
 
 import json
 from mysql import connector
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne
-CLIENT = MongoClient(
-    "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
-)
-DB = CLIENT.product_search
+
 current_time = datetime.now()
 prev_time = current_time - timedelta(hours=1)
 connection = connector.connect(

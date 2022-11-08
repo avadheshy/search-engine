@@ -4,11 +4,9 @@ import json
 import datetime
 from mysql import connector
 from pymongo import MongoClient, UpdateOne
+from app import DB
 
-# CLIENT = MongoClient(
-#     "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
-# )
-# DB = CLIENT.search
+
 
 # def lambda_handler1(event, context):
 #     data = event['records']
@@ -98,8 +96,7 @@ from pymongo import MongoClient, UpdateOne
 #             'variants':i['product_data']
             
 #         })
-CLIENT = MongoClient("mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")
-DB = CLIENT.product_search
+
      
 def fun():
     ans = list(DB['product_store_sharded'].find({'barcode': None}, {'_id':0,'store_id':1,'product_id': 1}))

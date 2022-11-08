@@ -277,6 +277,8 @@ def get_pipeline(
     return PIPELINE
 
 get_pipeline(keyword='rice')
+
+
 for i in range(1,170000,10000):
     ids=list(map(str,range(i,i+10000)))
 
@@ -350,6 +352,18 @@ for i in range(1,170000,10000):
     print(i)
     print(len(payload))
     
+'response'[
+    #count, total number of products
+    #rows,
+    #currentPage, page (bydefault 1)
+    numFound,
+    #lastPage , count/pagesize(bydefault 15)
+    # productIds,product ids
+    # groupIds , groupids
+    filters
+]
+
+  
     
 
 

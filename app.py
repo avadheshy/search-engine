@@ -23,7 +23,6 @@ CLIENT = MongoClient(
     "mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")
 
 DB = CLIENT.product_search
-db=CLIENT.search
 
 
 @app.post('/boost')
@@ -157,28 +156,99 @@ def filter_product(request: Request):
     request_data = dict(request.query_params.items())
     filters_for=request_data.get('filters_for')
     filters_for_id=request_data.get('filters_for_id')
-    category_ids = request_data.get('category_ids')
-    brand_ids = request_data.get('brand_ids')
+    categories = request_data.get('categories')
+    brandIds = request_data.get('brandIds')
     store_id = request_data.get('store_id')
     sort_by = request_data.get('sort_by')
     user_id = request_data.get("user_id")
     type = request_data.get("type")
-    page = request_data.get("page",0) 
-    skip = (int(page)-1)*10
-    limit = int(page)*10
+    page=int(request_data.get("page")) if request_data.get("page") else 0 
+    per_page = int(request_data.get("per_page")) if request_data.get("per_page") else 15
+    skip = (int(page)-1)*15
+    limit = per_page
+    brands_input=[]
+    if filters_for=='brand':
+        brands_input.append(filters_for_id)
+    if brandIds:
+        brands_input.extend(brandIds)
+    category_input=[]
+    if filters_for in ['cl1','cl2','cl3','cl4']:
+        category_input.append(filters_for_id)
+    if categories:
+        category_input.extend(categories)
     response=[]
     if type=='mall':
-        LISTING_PIPELINE=listing_pipeline_mall(filters_for,filters_for_id,store_id, brand_ids,category_ids,sort_by,skip, limit)
-        print(LISTING_PIPELINE)
-        response = db['list_product'].aggregate(LISTING_PIPELINE).next()
+        LISTING_PIPELINE=listing_pipeline_mall(filters_for,filters_for_id,store_id, brandIds,categories,sort_by,skip, limit)
+        # print(LISTING_PIPELINE)
+        response = DB['list_products'].aggregate(LISTING_PIPELINE).next()
     else:
-        LISTING_PIPELINE = listing_pipeline_retail(filters_for,filters_for_id,store_id, brand_ids,category_ids,sort_by,skip, limit)
-        print(LISTING_PIPELINE)
-        response = db['list_product'].aggregate(LISTING_PIPELINE).next()
-    
-    response["data"] = (
+        LISTING_PIPELINE = listing_pipeline_retail(filters_for,filters_for_id,store_id, brandIds,categories,sort_by,skip, limit)
+        # print(LISTING_PIPELINE)
+        response = DB['list_products'].aggregate(LISTING_PIPELINE).next()
+    Response={}
+    # print(response)
+    dict_category_ids={}
+    Response["productIds"] = (
         [i.get("id") for i in response["data"]] if response["data"] else []
     )
+    Response["groupIds"] = (
+        [i.get("group_id") for i in response["data"]] if response["data"] else []
+    )
+    brands=[]
+    dict_brand_ids={}
+    brand_data=[]
+    category=[]
+    dict_category_ids={}
+    category_data=[]
+    print(brands_input)
+    if response['data']:
+        for i in response['data']:
+            brands.append(i.get('brand_id'))
+            category.append(i.get('category_id'))
+        for id in brands:
+            if dict_brand_ids.get(id):
+                dict_brand_ids[id]+=1
+            else:
+                dict_brand_ids[id]=1
+    
+        brand_result=list(DB['brands'].aggregate([{'$match':{'id':{'$in':list(map(str,dict_brand_ids.keys()))}}},{'$project':{'id':1,'_id':0,'name':1,'logo':1}}]))       
+        for i in brand_result:
+            brand_data.append({
+            'id':i.get('id'),
+            'name':i.get('name'),
+            'active':True if i.get('id') in brands_input else False,
+            'logo':i.get('logo'),
+            'count':dict_brand_ids.get(int(i.get('id'))),
+            "type": "brand",
+            "filter_key": "brandIds[]"
+                
+            })
+        for id in category:
+            if dict_category_ids.get(id):
+                dict_category_ids[id]+=1
+            else:
+                dict_category_ids[id]=1
+        category_result=list(DB['categories'].aggregate([{'$match':{'id':{'$in':list(map(str,dict_category_ids.keys()))}}},{'$project':{'id':1,'_id':0,'name':1}}]))       
+        for i in category_result:
+            category_data.append({
+            'id':i.get('id'),
+            'name':i.get('name'),
+            'active':True if i.get('id') in category_input else False,
+            'icon':None,
+            'slug':None,
+            'count':dict_category_ids.get(int(i.get('id'))),
+                
+            })
+        
+   
     count = response["total"][0] if response["total"] else {}
-    response["total"] = count.get("count") if count else 0
-    return response
+    last_page=Response["total"] = count.get("count") if count else 0
+    Response['numFound']=int(last_page)
+    Response['rows']=limit
+    Response['currentPage']=page
+    Response['lastPage']=(int(last_page)+int(per_page)-1)//int(per_page)
+    Response['filters']={"brands":brand_data,
+        "categories": category_data,
+        "categories_l2": None
+    }
+    return Response
