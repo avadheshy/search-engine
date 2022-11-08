@@ -1,4 +1,10 @@
 PAGE_SIZE = 10
+ERROR_RESPONSE_DICT_FORMAT = {
+    "status": False,
+    "message": None,
+    "data": None
+}
+S3_BRAND_URL = "https://s3-ap-south-1.amazonaws.com/niyoos-test/media/brand/"
 STORE_WH_MAP = {
     "1": "3",
     "2": "3",
