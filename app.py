@@ -1,13 +1,17 @@
 import codecs
+import math
 import json
+from pymongo import UpdateOne,UpdateMany
 from fastapi import FastAPI, Request, Query, HTTPException, File, UploadFile
-from pymongo import MongoClient, UpdateOne, UpdateMany
+from settings import DB,sentry_sdk
+from constants import ERROR_RESPONSE_DICT_FORMAT, S3_BRAND_URL
 from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline_mall,listing_pipeline_retail
 from constants import PAGE_SIZE
 import csv
 from io import BytesIO
 from io import StringIO
-import sentry_sdk
+from search_utils import SearchUtils
+
 
 sentry_sdk.init(
     # dsn="https://fa760c10052c4da88ba731dc48c9020e@o1194835.ingest.sentry.io/6768729",
@@ -19,11 +23,6 @@ sentry_sdk.init(
 )
 
 app = FastAPI()
-CLIENT = MongoClient(
-    "mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")
-
-DB = CLIENT.product_search
-
 
 @app.post('/boost')
 async def add_booster(request: Request, file: UploadFile = File(...)):
@@ -168,15 +167,16 @@ def filter_product(request: Request):
     skip = (int(page)-1)*15
     limit = per_page
     brands_input=[]
+    print(brandIds)
     if filters_for=='brand':
         brands_input.append(filters_for_id)
     if brandIds:
-        brands_input.extend(brandIds)
+        brands_input.extend(brandIds.split(','))
     category_input=[]
     if filters_for in ('cl1','cl2','cl3','cl4'):
         category_input.append(filters_for_id)
     if categories:
-        category_input.extend(categories)
+        category_input.extend(categories.split(','))
     response=[]
     if type=='mall':
         print('hello1')
@@ -257,3 +257,66 @@ def filter_product(request: Request):
         "categories_l2": None
     }
     return Response
+
+
+
+@app.get("/v1/product-listing/")
+def product_listing(request: Request):
+    
+    request_data = dict(request.query_params.items())
+
+    def get_typcasted_query_params(request_data):
+        typcasted_query_params = dict()
+        try:
+            typcasted_query_params["store_id"] = request_data.get("store_id")
+            typcasted_query_params["page"] = int(request_data.get('page')) if request_data.get('page') else 1
+            typcasted_query_params["per_page"] = int(request_data.get('per_page')) if request_data.get(
+                'per_page') else 15
+            typcasted_query_params["filters_for"] = request_data.get("filters_for")
+            typcasted_query_params["filters_for_id"] = int(request_data.get("filters_for_id"))
+            typcasted_query_params["sort_by"] = request_data.get("sort_by")
+            typcasted_query_params["type"] = request_data.get("type")
+            if request_data.get("brandIds"):
+                typcasted_query_params["brandIds"] = str(request_data.get("brandIds")).split(",")
+                typcasted_query_params["brandIds"] = list(map(int, typcasted_query_params["brandIds"])) or []
+            if request_data.get("categories"):
+                typcasted_query_params["categories"] = str(request_data.get("categories")).split(",")
+                typcasted_query_params["categories"] = list(map(int, typcasted_query_params["categories"])) or []
+        except Exception as error:
+            typcasted_query_params["error_msg"] = f"{error}"
+        return typcasted_query_params
+
+    typcasted_query_params = get_typcasted_query_params(request_data)
+    
+    
+
+    data=[]
+
+    if typcasted_query_params.get("type")=='retail':
+        pipeline=listing_pipeline_retail(typcasted_query_params)
+        data = list(DB["product_store_sharded"].aggregate(pipeline))
+    # print(data)
+    data_to_return = data[0].get("data")
+    brand_data = data[0].get("brand_data", {}).get("brands_data", {}) or {}
+    category_data = data[0].get("category_data", {}).get("categories_data", {}) or {}
+    num_found = data[0].get("numFound") or 0
+    brands_array_with_count = SearchUtils.remove_duplicates_and_add_count_of_each_item(brand_data)
+    categories_array_with_count = SearchUtils.remove_duplicates_and_add_count_of_each_item(category_data)
+    final_result = {
+        "count": len(data_to_return),
+        "rows": typcasted_query_params.get("per_page"),
+        "currentPage": typcasted_query_params.get("page"),
+        "numFound": num_found,
+        "lastPage": math.ceil(num_found/typcasted_query_params.get("per_page")),
+        "productIds": [int(product.get('product_id')) for product in data_to_return],
+        "groupIds": [product.get('group_id') for product in data_to_return],
+        # "data": data_to_return,
+        # "brand_data": brand_data,
+        # "category_data": category_data,
+        "filters": {
+            "brands": brands_array_with_count,
+            "categories": categories_array_with_count
+        }
+    }
+    return final_result
+
