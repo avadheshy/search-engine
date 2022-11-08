@@ -31,7 +31,8 @@ def listing_pipeline_mall(filters_for,filters_for_id,store_id, brandIds,categori
     sort_query = {}
     match_filter['is_mall'] = "1"
     match_filter['status']=1
-    
+    category_filter={}
+    # tag_filter={}
     #filter for category ids
     if categories:
         categories=list(map(int,categories))
@@ -41,16 +42,16 @@ def listing_pipeline_mall(filters_for,filters_for_id,store_id, brandIds,categori
         brandIds=list(map(int,brandIds))
         match_filter['brand_id'] = {'$in': brandIds}
     if filters_for=='cl1':
-        match_filter['cat_level']='1'
+        category_filter['cat_level']='1'
         match_filter["category_id"]=int(filters_for_id)
     elif filters_for=='cl2':
-        match_filter['cat_level']='2'
+        category_filter['cat_level']='2'
         match_filter["category_id"]=int(filters_for_id)
     elif filters_for=='cl3':
-        match_filter['cat_level']='3'
+        category_filter['cat_level']='3'
         match_filter["category_id"]=int(filters_for_id)
     elif filters_for=='cl4':
-        match_filter['cat_level']='4'
+        category_filter['cat_level']='4'
         match_filter["category_id"]=int(filters_for_id)
     elif filters_for =='brand':
         match_filter["brand_id"]=int(filters_for_id)
@@ -59,7 +60,7 @@ def listing_pipeline_mall(filters_for,filters_for_id,store_id, brandIds,categori
     elif filters_for=='group':
         match_filter['group_id']=int(filters_for_id)
     elif filters_for=='tag':
-        match_filter['tags']=filters_for_id
+        category_filter['tags']=filters_for_id
     #sorting based on given name
     if sort_by == 'max_price':
         sort_query['price'] = -1
@@ -73,61 +74,169 @@ def listing_pipeline_mall(filters_for,filters_for_id,store_id, brandIds,categori
         sort_query['created_at'] = -1
 
     return [
-        {
-            '$match': match_filter
-        },
-         {
-            "$lookup": {
-                    "from": "product_warehouse_stocks",
-                    "localField": "id",
-                    "foreignField": "product_id",
-                    "as": "data",
-                    "pipeline": [
-                        {"$match": {"warehouse_id": wh_id}},
-                    ],
-                }
-            },
-        {
-            '$project': {
-                '_id': 0,
-                'id': 1,
-                'price':1,
-                'updated_at': 1,
-                'created_at':1,
-                'category_id':1,
-                'group_id':1,
-                'brand_id':1
-            }
-        },
-
-        {'$sort': sort_query},
-        {
-            '$project': {
-                'id': 1,
-                'group_id':1,
-                'brand_id':1,
-                'category_id':1,
-                
-                '_id': 0
-            }
-        },
-        {
-            '$facet': {
-                'total': [
-                    {
-                        '$count': 'count'
-                    }
-                ],
-                'data': [
-                    {
-                        '$skip': skip
-                    }, {
-                        '$limit': limit
-                    }
-                ]
+    {
+        '$match':match_filter
+    }, {
+        '$project': {
+            '_id': 0, 
+            'category_id': {
+                '$toString': '$category_id'
+            }, 
+            'brand_id': 1, 
+            'group_id': 1, 
+            'id': 1, 
+            'created_at': 1, 
+            'updated_at': 1, 
+            'price': 1, 
+            'str_brand_id': {
+                '$toString': '$brand_id'
             }
         }
+    }, {
+        '$lookup': {
+            'from': 'product_tag', 
+            'let': {
+                'productID': '$id'
+            }, 
+            'pipeline': [
+                {
+                    '$match': {
+                        '$expr': {
+                            '$eq': [
+                                '$product_id', '$$productID'
+                            ]
+                        }
+                    }
+                }, {
+                    '$project': {
+                        '_id': 0, 
+                        'tag_id': 1
+                    }
+                }
+            ], 
+            'as': 'product_tag_data'
+        }
+    }, {
+        '$lookup': {
+            'from': 'all_categories', 
+            'let': {
+                'categoryID': {
+                    '$ifNull': [
+                        '$category_id', None
+                    ]
+                }
+            }, 
+            'pipeline': [
+                {
+                    '$match': {
+                        '$expr': {
+                            '$eq': [
+                                '$id', '$$categoryID'
+                            ]
+                        }
+                    }
+                }, {
+                    '$project': {
+                        '_id': 0, 
+                        'id': 1, 
+                        'name': 1, 
+                        'cat_level': 1
+                    }
+                }
+            ], 
+            'as': 'all_categories_data'
+        }
+    }, {
+        '$unwind': {
+            'path': '$all_categories_data', 
+            'preserveNullAndEmptyArrays': False
+        }
+    }, {
+        '$project': {
+            '_id': 0, 
+            'id': 1, 
+            'price': {
+                '$toDouble': '$price'
+            }, 
+            'created_at': {
+                '$dateFromString': {
+                    'dateString': '$created_at'
+                }
+            }, 
+            'updated_at': {
+                '$dateFromString': {
+                    'dateString': '$updated_at'
+                }
+            }, 
+            'group_id': '$group_id', 
+            'brand_id': '$brand_id', 
+            'str_brand_id': '$str_brand_id', 
+            'category_id_in_pss': '$category_id', 
+            'tags': '$product_tag_data.tag_id', 
+            'category_id': '$all_categories_data.id', 
+            'category_name': '$all_categories_data.name', 
+            'cat_level': '$all_categories_data.cat_level'
+        }
+    }, {
+        '$match': category_filter
+    }, {
+        '$lookup': {
+            'from': 'product_warehouse_stocks', 
+            'localField': 'id', 
+            'foreignField': 'product_id', 
+            'as': 'data', 
+            'pipeline': [
+                {
+                    '$match': {
+                        'warehouse_id': '3'
+                    }
+                }
+            ]
+        }
+    }, {
+        '$unwind': {
+            'path': '$data', 
+            'preserveNullAndEmptyArrays': False
+        }
+    }, {
+        '$project': {
+            '_id': 0, 
+            'id': 1, 
+            'price': 1, 
+            'updated_at': 1, 
+            'created_at': 1, 
+            'category_id': 1, 
+            'group_id': 1, 
+            'brand_id': 1
+        }
+    }, {
+        '$sort':sort_query
+    }, {
+        '$project': {
+            'id': 1, 
+            'group_id': 1, 
+            'brand_id': 1, 
+            'category_id': 1, 
+            '_id': 0
+        }
+    }, {
+        '$facet': {
+            'total': [
+                {
+                    '$count': 'count'
+                }
+            ], 
+            'data': [
+                {
+                    '$skip': 0
+                }, {
+                    '$limit': 15
+                }
+            ]
+        }
+    }
     ]
+
 
 
 def listing_pipeline_retail(filters_for,filters_for_id,store_id, brandIds,categories,sort_by,skip, limit):

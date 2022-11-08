@@ -2,7 +2,7 @@ __pycache__
 myenv/
 start.sh
 abc.py
-
+.idea
 test.py
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -153,6 +153,7 @@ def store_warehouse_map(request: Request):
 
 @app.get("/v3/product_listing")
 def filter_product(request: Request):
+    print('hello3')
     request_data = dict(request.query_params.items())
     filters_for=request_data.get('filters_for')
     filters_for_id=request_data.get('filters_for_id')
@@ -172,20 +173,23 @@ def filter_product(request: Request):
     if brandIds:
         brands_input.extend(brandIds)
     category_input=[]
-    if filters_for in ['cl1','cl2','cl3','cl4']:
+    if filters_for in ('cl1','cl2','cl3','cl4'):
         category_input.append(filters_for_id)
     if categories:
         category_input.extend(categories)
     response=[]
     if type=='mall':
+        print('hello1')
         LISTING_PIPELINE=listing_pipeline_mall(filters_for,filters_for_id,store_id, brandIds,categories,sort_by,skip, limit)
-        # print(LISTING_PIPELINE)
-        response = DB['list_products'].aggregate(LISTING_PIPELINE).next()
+        print(LISTING_PIPELINE)
+        print('hello')
+        response = DB['search_products'].aggregate(LISTING_PIPELINE).next()
     else:
         LISTING_PIPELINE = listing_pipeline_retail(filters_for,filters_for_id,store_id, brandIds,categories,sort_by,skip, limit)
-        # print(LISTING_PIPELINE)
+        print(LISTING_PIPELINE)
         response = DB['list_products'].aggregate(LISTING_PIPELINE).next()
     Response={}
+    
     # print(response)
     dict_category_ids={}
     Response["productIds"] = (
@@ -217,7 +221,8 @@ def filter_product(request: Request):
             'id':i.get('id'),
             'name':i.get('name'),
             'active':True if i.get('id') in brands_input else False,
-            'logo':i.get('logo'),
+            'logo':f"https://s3-ap-south-1.amazonaws.com/niyoos-test/media/brand/{i.get('id')}/{i.get('logo')}",
+            'icon':f"https://s3-ap-south-1.amazonaws.com/niyoos-test/media/brand/{i.get('id')}/{i.get('logo')}",
             'count':dict_brand_ids.get(int(i.get('id'))),
             "type": "brand",
             "filter_key": "brandIds[]"
