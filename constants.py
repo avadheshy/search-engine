@@ -4,6 +4,12 @@ ERROR_RESPONSE_DICT_FORMAT = {
     "message": None,
     "data": None
 }
+CATEGORY_LEVEL_MAPPING = {
+    "cl1": "1",
+    "cl2": "2",
+    "cl3": "3",
+    "cl4": "4",
+}
 S3_BRAND_URL = "https://s3-ap-south-1.amazonaws.com/niyoos-test/media/brand/"
 STORE_WH_MAP = {
     "1": "3",
