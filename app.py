@@ -544,7 +544,7 @@ def product_listing__v2(request: Request):
     warehouse_id = STORE_WH_MAP.get(typcasted_query_params.get("store_id"))
     filter_kwargs_for_mall = dict(
         is_mall="1",
-        status="1"
+        status=1
     )
 
     only_brand_data, only_category_data, both_brand_and_category_data = False, False, False
@@ -583,16 +583,21 @@ def product_listing__v2(request: Request):
     print("filter_kwargs : ", filter_kwargs)
     print("filter_kwargs_for_mall : ", filter_kwargs_for_mall)
 
+    data = []
     if typcasted_query_params.get("type") == "retail":
         pipeline = get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit)
         data = list(SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipeline))
     elif typcasted_query_params.get("type") == "mall":
         pipeline = get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, offset, limit)
         data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
+
+    # return data
     data_to_return = data[0].get("data")
     num_found = data[0].get("numFound") or 0
     brand_ids = list(set([str(product.get('brand_id')) for product in data_to_return]))
     category_ids = list(set([str(product.get('category_id')) for product in data_to_return]))
+    print(brand_ids)
+    print(category_ids)
     brand_filter = {
         "id": {"$in": brand_ids}
     }
@@ -607,6 +612,7 @@ def product_listing__v2(request: Request):
         brand_data = list(SHARDED_SEARCH_DB["brands"].find(brand_filter, brand_projection)) or []
     if only_category_data:
         category_data = list(SHARDED_SEARCH_DB["all_categories"].find(category_filter, category_projection)) or []
+        print("Hye : ", category_data)
     if both_brand_and_category_data:
         brand_data = list(SHARDED_SEARCH_DB["brands"].find(brand_filter, brand_projection)) or []
         category_data = list(SHARDED_SEARCH_DB["all_categories"].find(category_filter, category_projection)) or []
