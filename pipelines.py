@@ -350,6 +350,85 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
     ]
     return pipeline
 
-def get_listing_pipeline_for_mall(filter_kwargs_for_mall, sort_query, offset, limit):
-    pipeline = []
+def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, offset, limit):
+    pipeline = [
+    {'$match':filter_kwargs_for_mall},
+    {
+        '$lookup': {
+            'from': 'product_warehouse_stocks', 
+            'localField': 'id', 
+            'foreignField': 'product_id', 
+            'as': 'data',
+            'pipeline': [
+                {
+                    '$match': {
+                        'warehouse_id': warehouse_id
+                    }
+                }, {
+                    '$project': {
+                        'warehouse_id': 1
+                    }
+                }
+            ]
+        }
+    }, {
+        '$match': {
+            'data': {
+                '$ne': []
+            }
+        }
+    }, {
+        '$project': {
+            'id': {
+                '$toInt': '$id'
+            }, 
+            'brand_id': {
+                '$toString': '$brand_id'
+            }, 
+            'category_id': {
+                '$toString': '$category_id'
+            }, 
+            'group_id': 1, 
+            'price': 1, 
+            'created_at': {
+                '$dateFromString': {
+                    'dateString': '$created_at'
+                }
+            }, 
+            'updated_at': {
+                '$dateFromString': {
+                    'dateString': '$updated_at'
+                }
+            }
+        }
+    },
+    {
+        '$project': {
+            '_id': 0, 
+            'id': 1, 
+            'brand_id': 1, 
+            'category_id': 1, 
+            'group_id': 1
+        }
+    }, {
+        '$facet': {
+            'total': [
+                {
+                    '$count': 'numFound'
+                }
+            ], 
+            'data': [
+                {
+                    '$sort': sort_query
+                },
+                {
+                    '$skip': offset
+                }, {
+                    '$limit': limit
+                }
+            ]
+        }
+    }
+    ]
+    
     return pipeline

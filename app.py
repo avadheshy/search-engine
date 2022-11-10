@@ -2,7 +2,7 @@ import json
 import math
 from fastapi import FastAPI, Request
 
-from constants import ERROR_RESPONSE_DICT_FORMAT, S3_BRAND_URL, CATEGORY_LEVEL_MAPPING
+from constants import ERROR_RESPONSE_DICT_FORMAT, CATEGORY_LEVEL_MAPPING, STORE_WH_MAP
 from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline, get_listing_pipeline_for_retail, get_listing_pipeline_for_mall
 from settings import SHARDED_SEARCH_DB
 from search_utils import SearchUtils
@@ -540,6 +540,8 @@ def product_listing__v2(request: Request):
         is_mall="0",
         status="1"
     )
+    
+    warehouse_id = STORE_WH_MAP.get(typcasted_query_params.get("store_id"))
     filter_kwargs_for_mall = dict(
         is_mall="1",
         status="1"
@@ -585,7 +587,7 @@ def product_listing__v2(request: Request):
         pipeline = get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit)
         data = list(SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipeline))
     elif typcasted_query_params.get("type") == "mall":
-        pipeline = get_listing_pipeline_for_mall(filter_kwargs_for_mall, sort_query, offset, limit)
+        pipeline = get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, offset, limit)
         data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
     data_to_return = data[0].get("data")
     num_found = data[0].get("numFound") or 0
