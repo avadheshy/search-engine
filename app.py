@@ -1,15 +1,11 @@
 import codecs
 import math
-import json
-from pymongo import UpdateOne,UpdateMany
-from fastapi import FastAPI, Request, Query, HTTPException, File, UploadFile
-from settings import DB,sentry_sdk
-from constants import ERROR_RESPONSE_DICT_FORMAT, S3_BRAND_URL,CATEGORY_LEVEL_MAPPING
-from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline_mall,listing_pipeline_retail
-from constants import PAGE_SIZE
+from fastapi import FastAPI, Request,
 import csv
-from io import BytesIO
-from io import StringIO
+import sentry_sdk
+from constants import ERROR_RESPONSE_DICT_FORMAT, CATEGORY_LEVEL_MAPPING, STORE_WH_MAP
+from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline, get_listing_pipeline_for_retail, get_listing_pipeline_for_mall
+from settings import SHARDED_SEARCH_DB
 from search_utils import SearchUtils
 
 
@@ -392,34 +388,50 @@ def product_listing__v2(request: Request):
         is_mall="0",
         status="1"
     )
+    
+    warehouse_id = STORE_WH_MAP.get(typcasted_query_params.get("store_id"))
+    filter_kwargs_for_mall = dict(
+        is_mall="1",
+        status="1"
+    )
 
     only_brand_data, only_category_data, both_brand_and_category_data = False, False, False
     if typcasted_query_params.get("brandIds"):
         only_category_data = True
         filter_kwargs["brand_id"] = {"$in": typcasted_query_params.get("brandIds")}
+        filter_kwargs_for_mall["brand_id"] = {"$in": typcasted_query_params.get("brandIds")}
     if typcasted_query_params.get("categories"):
         only_brand_data = True
         filter_kwargs["category_id"] = {"$in": typcasted_query_params.get("categories")}
+        filter_kwargs_for_mall["category_id"] = {"$in": typcasted_query_params.get("categories")}
 
     if typcasted_query_params.get("filters_for") == "brand":
         only_category_data = True
         filter_kwargs["brand_id"] = typcasted_query_params.get("filter_id")
+        filter_kwargs_for_mall["brand_id"] = typcasted_query_params.get("filter_id")
     elif typcasted_query_params.get("filters_for") == "category":
         only_brand_data = True
         filter_kwargs["category_id"] = typcasted_query_params.get("filter_id")
+        filter_kwargs_for_mall["category_id"] = typcasted_query_params.get("filter_id")
     elif typcasted_query_params.get("filters_for") == "group":
         both_brand_and_category_data = True
         filter_kwargs["group_id"] = typcasted_query_params.get("filter_id")
+        filter_kwargs_for_mall["group_id"] = typcasted_query_params.get("filter_id")
     elif typcasted_query_params.get("filters_for") == "tag":
         both_brand_and_category_data = True
         filter_kwargs["tag_ids"] = str(typcasted_query_params.get("filter_id"))
+        filter_kwargs_for_mall["tag_ids"] = str(typcasted_query_params.get("filter_id"))
     elif typcasted_query_params.get("filters_for") in ("cl1", "cl2", "cl3", "cl4"):
         only_brand_data = True
         filter_kwargs["cat_level"] = CATEGORY_LEVEL_MAPPING.get(typcasted_query_params.get("filters_for"))
         filter_kwargs["category_id"] = typcasted_query_params.get("filter_id")
+        filter_kwargs_for_mall["cat_level"] = CATEGORY_LEVEL_MAPPING.get(typcasted_query_params.get("filters_for"))
+        filter_kwargs_for_mall["category_id"] = typcasted_query_params.get("filter_id")
 
     print("filter_kwargs : ", filter_kwargs)
+    print("filter_kwargs_for_mall : ", filter_kwargs_for_mall)
 
+<<<<<<< HEAD
     pipeline = [
         {
             "$match": filter_kwargs
@@ -494,10 +506,93 @@ def product_listing__v2(request: Request):
         }
     ]
     data = list(DB["product_store_sharded"].aggregate(pipeline))
+||||||| 48b2eeb
+    pipeline = [
+        {
+            "$match": filter_kwargs
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "store_id": 1,
+                "category_id": {"$toString": "$category_id"},
+                "brand_id": 1,
+                "group_id": 1,
+                "product_id": 1,
+                "created_at": 1,
+                "updated_at": 1,
+                "price": 1,
+                "str_brand_id": {"$toString": "$brand_id"}
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "product_id": "$product_id",
+                "price": {"$toDouble": "$price"},
+                "created_at": {
+                    "$dateFromString": {
+                        "dateString": '$created_at',
+                    }
+                },
+                "updated_at": {
+                    "$dateFromString": {
+                        "dateString": '$updated_at',
+                    }
+                },
+                # "score": {"$meta": "textScore"},
+                "group_id": "$group_id",
+                "brand_id": "$brand_id",
+                "str_brand_id": "$str_brand_id",
+                "category_id_in_pss": "$category_id",
+                "category_id": "$category_id",
+                "category_name": "$all_categories_data.name",
+                "cat_level": "$all_categories_data.cat_level",
+                "category_icon": "$all_categories_data.icon",
+                "brand_name": "$brands_data.name",
+                "brand_logo": "$brands_data.logo"
+            }
+        },
+        {
+            '$facet': {
+                'total': [
+                    {
+                        '$count': 'count'
+                    }
+                ],
+                'data': [
+                    {
+                        "$sort": sort_query
+                    },
+                    {
+                        '$skip': offset
+                    },
+                    {
+                        '$limit': limit
+                    }
+                ]
+            }
+        },
+        {
+            "$project": {
+                "data": "$data",
+                "numFound": {"$arrayElemAt": ['$total.count', 0]},
+            }
+        }
+    ]
+    data = list(SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipeline))
+=======
+    if typcasted_query_params.get("type") == "retail":
+        pipeline = get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit)
+        data = list(SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipeline))
+    elif typcasted_query_params.get("type") == "mall":
+        pipeline = get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, offset, limit)
+        data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
+>>>>>>> e6853f214856ac7574e1df5b525c6e44d2538bf0
     data_to_return = data[0].get("data")
     num_found = data[0].get("numFound") or 0
     brand_ids = list(set([str(product.get('brand_id')) for product in data_to_return]))
-    category_ids = list(set([product.get('category_id') for product in data_to_return]))
+    category_ids = list(set([str(product.get('category_id')) for product in data_to_return]))
     brand_filter = {
         "id": {"$in": brand_ids}
     }
@@ -519,8 +614,6 @@ def product_listing__v2(request: Request):
     brand_data_to_return = SearchUtils.make_brand_data(brand_data)
     category_data_to_return = SearchUtils.make_category_data(category_data)
 
-    # TODO category data in null because we are sending cat_level2 data, and cl2 id is not in sharded collection
-
     final_result = {
         "count": len(data_to_return),
         "rows": typcasted_query_params.get("per_page"),
@@ -529,9 +622,6 @@ def product_listing__v2(request: Request):
         "lastPage": math.ceil(num_found/typcasted_query_params.get("per_page")),
         "productIds": [int(product.get('product_id')) for product in data_to_return],
         "groupIds": [product.get('group_id') for product in data_to_return],
-        # "data": data_to_return,
-        # "brand_data": brand_data,
-        # "category_data": category_data,
         "filters": {
             "brands": brand_data_to_return,
             "categories": category_data_to_return

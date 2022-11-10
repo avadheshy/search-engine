@@ -19,6 +19,7 @@ env3.*
 env
 docs_build
 venv
+myenv
 docs.zip
 archive.zip
 .env
