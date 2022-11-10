@@ -488,7 +488,7 @@ async def product_listing_v1(request: Request):
                 'per_page') else 15
             typcasted_data["filters_for"] = request_data.get("filters_for")
             typcasted_data["filter_id"] = int(request_data.get("filter_id"))
-            typcasted_data["sort_by"] = request_data.get("sort_by")
+            typcasted_data["sort_by"] = request_data.get("sort_by") if request_data.get("sort_by") else None
             typcasted_data["type"] = request_data.get("type")
             if isinstance(request_data.get("brandIds"), list):
                 typcasted_data["brandIds"] = list(map(int, request_data.get("brandIds")))
@@ -499,15 +499,16 @@ async def product_listing_v1(request: Request):
         return typcasted_data
 
     typcasted_data = get_typcasted_data(request_data)
+    if typcasted_data.get("error_msg"):
+        error_response_dict["message"] = typcasted_data.get("error_msg")
+        return error_response_dict
+    
     sort_by = typcasted_data.get("sort_by")
     offset = 0
     limit = 15
     if typcasted_data["page"] and typcasted_data["per_page"]:
         offset = (typcasted_data["page"] - 1) * typcasted_data["per_page"]
         limit = typcasted_data["per_page"]
-    if typcasted_data.get("error_msg"):
-        error_response_dict["message"] = typcasted_data.get("error_msg")
-        return error_response_dict
     if typcasted_data.get("type") not in ["mall", "retail"]:
         error_response_dict["message"] = "Invalid type"
         return error_response_dict
@@ -592,8 +593,8 @@ async def product_listing_v1(request: Request):
     # return data
     data_to_return = data[0].get("data")
     num_found = data[0].get("numFound") or 0
-    brand_ids = list(set([str(product.get('brand_id')) for product in data_to_return]))
-    category_ids = list(set([str(product.get('category_id')) for product in data_to_return]))
+    brand_ids = list(set([str(product.get('brand_id')) for product in data_to_return if product.get('brand_id')]))
+    category_ids = list(set([str(product.get('category_id')) for product in data_to_return if product.get('category_id')]))
     print(brand_ids)
     print(category_ids)
     brand_filter = {
@@ -610,7 +611,7 @@ async def product_listing_v1(request: Request):
         brand_data = list(SHARDED_SEARCH_DB["brands"].find(brand_filter, brand_projection)) or []
     if only_category_data:
         category_data = list(SHARDED_SEARCH_DB["all_categories"].find(category_filter, category_projection)) or []
-        print("Hye : ", category_data)
+        # print("Hye : ", category_data)
     if both_brand_and_category_data:
         brand_data = list(SHARDED_SEARCH_DB["brands"].find(brand_filter, brand_projection)) or []
         category_data = list(SHARDED_SEARCH_DB["all_categories"].find(category_filter, category_projection)) or []

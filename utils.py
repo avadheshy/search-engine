@@ -1,6 +1,7 @@
-from pymongo import MongoClient
+from pymongo import MongoClient,UpdateOne
 import csv
 from email.mime import image
+
 
 data_map = {
     "Uniq Id": "product_id",
@@ -178,3 +179,25 @@ PIPE1 = [
         }
     }
 ]
+
+data=list(DB['products'].aggregate([
+    {
+        '$match': {}
+    }, {
+        '$project': {
+            '_id': 0, 
+            'id': 1, 
+            'brand_id': 1, 
+            'category_id': 1
+        }
+    }
+]))
+payload=[]
+for i in data:
+    dict_data={}
+    dict_data['brand_id']=int(i.get('brand_id'))
+    dict_data['category_id']=int(i.get('category_id'))
+    payload.append(UpdateOne({'id':i.get(id)},{'$set':dict_data}))
+if payload:
+    DB['search_products'].bulkwrite(payload)
+  
