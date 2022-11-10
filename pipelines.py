@@ -349,3 +349,87 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
         }
     ]
     return pipeline
+
+
+def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, offset, limit):
+    pipeline = [
+        {'$match': filter_kwargs_for_mall},
+        {
+            '$lookup': {
+                'from': 'product_warehouse_stocks',
+                'localField': 'id',
+                'foreignField': 'product_id',
+                'as': 'data',
+                'pipeline': [
+                    {
+                        '$match': {
+                            'warehouse_id': warehouse_id
+                        }
+                    }, {
+                        '$project': {
+                            "_id": 0,
+                            'warehouse_id': 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            '$match': {
+                'data': {
+                    '$ne': []
+                }
+            }
+        },
+        {
+            '$project': {
+                "_id": 0,
+                'product_id': "$id",
+                'price': "$price",
+                'created_at': {
+                    '$dateFromString': {
+                        'dateString': '$created_at'
+                    }
+                },
+                'updated_at': {
+                    '$dateFromString': {
+                        'dateString': '$updated_at'
+                    }
+                },
+                'group_id': {
+                    "$toInt": "$group_id"
+                },
+                "brand_id": "$brand_id",
+                "category_id": "$category_id"
+            }
+        },
+        {
+            '$facet': {
+                'total': [
+                    {
+                        '$count': 'count'
+                    }
+                ],
+                'data': [
+                    {
+                        '$sort': sort_query
+                    },
+                    {
+                        '$skip': offset
+                    },
+                    {
+                        '$limit': limit
+                    }
+                ]
+            }
+        },
+        {
+            "$project": {
+                "data": "$data",
+                "numFound": {"$arrayElemAt": ['$total.count', 0]},
+            }
+        }
+    ]
+
+    print(pipeline)
+    return pipeline
