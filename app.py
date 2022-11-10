@@ -1,12 +1,14 @@
 import codecs
 import math
-from fastapi import FastAPI, Request,
+from fastapi import FastAPI, Request,UploadFile,File
 import csv
 import sentry_sdk
+from pymongo import UpdateMany,UpdateOne
 from constants import ERROR_RESPONSE_DICT_FORMAT, CATEGORY_LEVEL_MAPPING, STORE_WH_MAP
 from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline, get_listing_pipeline_for_retail, get_listing_pipeline_for_mall
 from settings import SHARDED_SEARCH_DB
 from search_utils import SearchUtils
+from settings import DB
 
 
 sentry_sdk.init(
@@ -20,26 +22,7 @@ sentry_sdk.init(
 
 app = FastAPI()
 
-@app.post('/boost')
-async def add_booster(request: Request, file: UploadFile = File(...)):
-    csvReader = csv.DictReader(codecs.iterdecode(file.file, 'utf-8'))
-    product_ids = []
-    for rows in csvReader:
-        print('hello')
-        product_ids.append(rows.get('PID'))
-    payload1 = []
-    payload2 = []
-    for product_id in product_ids:
-        payload1.append(UpdateOne({'id': product_id}, {
-                        '$set': {'winter_sale': 1}}))
-        payload1.append(UpdateMany({'id': product_id}, {
-                        '$set': {'winter_sale': 1}}))
-    print(len(payload1))
-    # if payload1:
-    #     DB['search_products'].bulk_write(payload1)
-    # if payload2:
-    #     DB['product_store_sharded'].bulk_write(payload2)
-    return True
+
 
 
 @app.post("/v1/search")
@@ -431,164 +414,12 @@ def product_listing__v2(request: Request):
     print("filter_kwargs : ", filter_kwargs)
     print("filter_kwargs_for_mall : ", filter_kwargs_for_mall)
 
-<<<<<<< HEAD
-    pipeline = [
-        {
-            "$match": filter_kwargs
-        },
-        {
-            "$project": {
-                "_id": 0,
-                "store_id": 1,
-                "category_id": {"$toString": "$category_id"},
-                "brand_id": 1,
-                "group_id": 1,
-                "product_id": 1,
-                "created_at": 1,
-                "updated_at": 1,
-                "price": 1,
-                "str_brand_id": {"$toString": "$brand_id"}
-            }
-        },
-        {
-            "$project": {
-                "_id": 0,
-                "product_id": "$product_id",
-                "price": {"$toDouble": "$price"},
-                "created_at": {
-                    "$dateFromString": {
-                        "dateString": '$created_at',
-                    }
-                },
-                "updated_at": {
-                    "$dateFromString": {
-                        "dateString": '$updated_at',
-                    }
-                },
-                # "score": {"$meta": "textScore"},
-                "group_id": "$group_id",
-                "brand_id": "$brand_id",
-                "str_brand_id": "$str_brand_id",
-                "category_id_in_pss": "$category_id",
-                "category_id": "$category_id",
-                "category_name": "$all_categories_data.name",
-                "cat_level": "$all_categories_data.cat_level",
-                "category_icon": "$all_categories_data.icon",
-                "brand_name": "$brands_data.name",
-                "brand_logo": "$brands_data.logo"
-            }
-        },
-        {
-            '$facet': {
-                'total': [
-                    {
-                        '$count': 'count'
-                    }
-                ],
-                'data': [
-                    {
-                        "$sort": sort_query
-                    },
-                    {
-                        '$skip': offset
-                    },
-                    {
-                        '$limit': limit
-                    }
-                ]
-            }
-        },
-        {
-            "$project": {
-                "data": "$data",
-                "numFound": {"$arrayElemAt": ['$total.count', 0]},
-            }
-        }
-    ]
-    data = list(DB["product_store_sharded"].aggregate(pipeline))
-||||||| 48b2eeb
-    pipeline = [
-        {
-            "$match": filter_kwargs
-        },
-        {
-            "$project": {
-                "_id": 0,
-                "store_id": 1,
-                "category_id": {"$toString": "$category_id"},
-                "brand_id": 1,
-                "group_id": 1,
-                "product_id": 1,
-                "created_at": 1,
-                "updated_at": 1,
-                "price": 1,
-                "str_brand_id": {"$toString": "$brand_id"}
-            }
-        },
-        {
-            "$project": {
-                "_id": 0,
-                "product_id": "$product_id",
-                "price": {"$toDouble": "$price"},
-                "created_at": {
-                    "$dateFromString": {
-                        "dateString": '$created_at',
-                    }
-                },
-                "updated_at": {
-                    "$dateFromString": {
-                        "dateString": '$updated_at',
-                    }
-                },
-                # "score": {"$meta": "textScore"},
-                "group_id": "$group_id",
-                "brand_id": "$brand_id",
-                "str_brand_id": "$str_brand_id",
-                "category_id_in_pss": "$category_id",
-                "category_id": "$category_id",
-                "category_name": "$all_categories_data.name",
-                "cat_level": "$all_categories_data.cat_level",
-                "category_icon": "$all_categories_data.icon",
-                "brand_name": "$brands_data.name",
-                "brand_logo": "$brands_data.logo"
-            }
-        },
-        {
-            '$facet': {
-                'total': [
-                    {
-                        '$count': 'count'
-                    }
-                ],
-                'data': [
-                    {
-                        "$sort": sort_query
-                    },
-                    {
-                        '$skip': offset
-                    },
-                    {
-                        '$limit': limit
-                    }
-                ]
-            }
-        },
-        {
-            "$project": {
-                "data": "$data",
-                "numFound": {"$arrayElemAt": ['$total.count', 0]},
-            }
-        }
-    ]
-    data = list(SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipeline))
-=======
     if typcasted_query_params.get("type") == "retail":
         pipeline = get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit)
         data = list(SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipeline))
     elif typcasted_query_params.get("type") == "mall":
         pipeline = get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, offset, limit)
         data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
->>>>>>> e6853f214856ac7574e1df5b525c6e44d2538bf0
     data_to_return = data[0].get("data")
     num_found = data[0].get("numFound") or 0
     brand_ids = list(set([str(product.get('brand_id')) for product in data_to_return]))
@@ -628,5 +459,7 @@ def product_listing__v2(request: Request):
         }
     }
     return final_result
+
+
 
 
