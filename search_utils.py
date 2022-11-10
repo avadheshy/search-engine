@@ -1,3 +1,4 @@
+from constants import S3_BRAND_URL
 class SearchUtils:
     @classmethod
     def remove_duplicates_and_add_count_of_each_item(cls, all_data):
@@ -49,5 +50,5 @@ class SearchUtils:
         return brand_data_to_return
 
 
-class SearchUtils:
+
     

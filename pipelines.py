@@ -32,6 +32,8 @@ def listing_pipeline_mall(filters_for, filters_for_id, store_id, brandIds, categ
     filter_query['sale_app'] = "1"
     # filter for category ids
     if categories:
+
+        # categories = list(map(int, categories))
         categories = list(map(int, categories.split(',')))
         filter_query['category_id'] = {'$in': categories}
     # filter for brand ids
@@ -57,7 +59,7 @@ def listing_pipeline_mall(filters_for, filters_for_id, store_id, brandIds, categ
     elif filters_for == 'group':
         filter_query['group_id'] = int(filters_for_id)
     elif filters_for == 'tag':
-        filter_query['tags'] = filters_for_id
+        filter_query['tag_ids'] = filters_for_id
     # sorting based on given name
     if sort_by == 'max_price':
         sort_query['price'] = -1
@@ -71,9 +73,86 @@ def listing_pipeline_mall(filters_for, filters_for_id, store_id, brandIds, categ
         sort_query['created_at'] = -1
 
     pipeline=[
-        {'$match':filter_query},
-        
+    {'$match':filter_query},
+    {
+        '$lookup': {
+            'from': 'product_warehouse_stocks', 
+            'localField': 'id', 
+            'foreignField': 'product_id', 
+            'as': 'data', 
+            'pipeline': [
+                {
+                    '$match': {
+                        'warehouse_id': '3'
+                    }
+                }, {
+                    '$project': {
+                        'warehouse_id': 1
+                    }
+                }
+            ]
+        }
+    }, {
+        '$match': {
+            'data': {
+                '$ne': []
+            }
+        }
+    }, {
+        '$project': {
+            'id': {
+                '$toInt': '$id'
+            }, 
+            'brand_id': {
+                '$toString': '$brand_id'
+            }, 
+            'category_id': {
+                '$toString': '$category_id'
+            }, 
+            'group_id': 1, 
+            'price': 1, 
+            'created_at': {
+                '$dateFromString': {
+                    'dateString': '$created_at'
+                }
+            }, 
+            'updated_at': {
+                '$dateFromString': {
+                    'dateString': '$updated_at'
+                }
+            }
+        }
+    }, {
+        '$sort': {
+            'price': -1
+        }
+    }, {
+        '$project': {
+            '_id': 0, 
+            'id': 1, 
+            'brand_id': 1, 
+            'category_id': 1, 
+            'group_id': 1
+        }
+    }, {
+        '$facet': {
+            'total': [
+                {
+                    '$count': 'count'
+                }
+            ], 
+            'data': [
+                {
+                    '$skip': 0
+                }, {
+                    '$limit': 15
+                }
+            ]
+        }
+    }
     ]
+        
+    
    
     
     return pipeline
