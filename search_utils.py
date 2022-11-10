@@ -27,11 +27,12 @@ class SearchUtils:
         if category_data:
             category_data_to_return = []
             for data in category_data:
+                logo_icon = f"category_url/{data.get('id')}/{data.get('logo')}" if data.get('logo') else None
                 category_data_to_return.append(dict(
                     id=data.get('id'),
                     name=data.get('name'),
-                    logo=f"category_url/{data.get('id')}/{data.get('logo')}",
-                    icon=f"category_url/{data.get('id')}/{data.get('logo')}",
+                    logo=logo_icon,
+                    icon=logo_icon,
                     type="category"
                 ))
         return category_data_to_return
@@ -42,11 +43,12 @@ class SearchUtils:
         if brand_data:
             brand_data_to_return = []
             for data in brand_data:
+                logo_icon = f"{S3_BRAND_URL}{data.get('id')}/{data.get('logo')}"
                 brand_data_to_return.append(dict(
                     id=data.get('id'),
                     name=data.get('name'),
-                    logo=f"{S3_BRAND_URL}{data.get('id')}/{data.get('logo')}",
-                    icon=f"{S3_BRAND_URL}{data.get('id')}/{data.get('logo')}",
+                    logo=logo_icon,
+                    icon=logo_icon,
                     type="brand"
                 ))
         return brand_data_to_return

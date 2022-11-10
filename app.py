@@ -3,7 +3,7 @@ import math
 from fastapi import FastAPI, Request
 
 from constants import ERROR_RESPONSE_DICT_FORMAT, S3_BRAND_URL, CATEGORY_LEVEL_MAPPING
-from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline
+from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline, get_listing_pipeline_for_retail
 from settings import SHARDED_SEARCH_DB
 from search_utils import SearchUtils
 
@@ -568,84 +568,12 @@ def product_listing__v2(request: Request):
 
     print("filter_kwargs : ", filter_kwargs)
 
-    pipeline = [
-        {
-            "$match": filter_kwargs
-        },
-        {
-            "$project": {
-                "_id": 0,
-                "store_id": 1,
-                "category_id": {"$toString": "$category_id"},
-                "brand_id": 1,
-                "group_id": 1,
-                "product_id": 1,
-                "created_at": 1,
-                "updated_at": 1,
-                "price": 1,
-                "str_brand_id": {"$toString": "$brand_id"}
-            }
-        },
-        {
-            "$project": {
-                "_id": 0,
-                "product_id": "$product_id",
-                "price": {"$toDouble": "$price"},
-                "created_at": {
-                    "$dateFromString": {
-                        "dateString": '$created_at',
-                    }
-                },
-                "updated_at": {
-                    "$dateFromString": {
-                        "dateString": '$updated_at',
-                    }
-                },
-                # "score": {"$meta": "textScore"},
-                "group_id": "$group_id",
-                "brand_id": "$brand_id",
-                "str_brand_id": "$str_brand_id",
-                "category_id_in_pss": "$category_id",
-                "category_id": "$category_id",
-                "category_name": "$all_categories_data.name",
-                "cat_level": "$all_categories_data.cat_level",
-                "category_icon": "$all_categories_data.icon",
-                "brand_name": "$brands_data.name",
-                "brand_logo": "$brands_data.logo"
-            }
-        },
-        {
-            '$facet': {
-                'total': [
-                    {
-                        '$count': 'count'
-                    }
-                ],
-                'data': [
-                    {
-                        "$sort": sort_query
-                    },
-                    {
-                        '$skip': offset
-                    },
-                    {
-                        '$limit': limit
-                    }
-                ]
-            }
-        },
-        {
-            "$project": {
-                "data": "$data",
-                "numFound": {"$arrayElemAt": ['$total.count', 0]},
-            }
-        }
-    ]
+    pipeline = get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit)
     data = list(SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipeline))
     data_to_return = data[0].get("data")
     num_found = data[0].get("numFound") or 0
     brand_ids = list(set([str(product.get('brand_id')) for product in data_to_return]))
-    category_ids = list(set([product.get('category_id') for product in data_to_return]))
+    category_ids = list(set([str(product.get('category_id')) for product in data_to_return]))
     brand_filter = {
         "id": {"$in": brand_ids}
     }
@@ -667,8 +595,6 @@ def product_listing__v2(request: Request):
     brand_data_to_return = SearchUtils.make_brand_data(brand_data)
     category_data_to_return = SearchUtils.make_category_data(category_data)
 
-    # TODO category data in null because we are sending cat_level2 data, and cl2 id is not in sharded collection
-
     final_result = {
         "count": len(data_to_return),
         "rows": typcasted_query_params.get("per_page"),
@@ -677,9 +603,6 @@ def product_listing__v2(request: Request):
         "lastPage": math.ceil(num_found/typcasted_query_params.get("per_page")),
         "productIds": [int(product.get('product_id')) for product in data_to_return],
         "groupIds": [product.get('group_id') for product in data_to_return],
-        # "data": data_to_return,
-        # "brand_data": brand_data,
-        # "category_data": category_data,
         "filters": {
             "brands": brand_data_to_return,
             "categories": category_data_to_return

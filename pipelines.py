@@ -293,3 +293,59 @@ def group_autocomplete_stage(
     NEW_GROUP_PIPELINE = PIPELINE[:-3] + GROUP_ADDITIONAL_STAGE + [PIPELINE[-1]]
     # print(NEW_GROUP_PIPELINE)
     return NEW_GROUP_PIPELINE
+
+
+def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
+    pipeline = [
+        {
+            "$match": filter_kwargs
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "product_id": "$product_id",
+                "price": {"$toDouble": "$price"},
+                "created_at": {
+                    "$dateFromString": {
+                        "dateString": '$created_at',
+                    }
+                },
+                "updated_at": {
+                    "$dateFromString": {
+                        "dateString": '$updated_at',
+                    }
+                },
+                # "score": {"$meta": "textScore"},
+                "group_id": "$group_id",
+                "brand_id": "$brand_id",
+                "category_id": "$category_id"
+            }
+        },
+        {
+            '$facet': {
+                'total': [
+                    {
+                        '$count': 'count'
+                    }
+                ],
+                'data': [
+                    {
+                        "$sort": sort_query
+                    },
+                    {
+                        '$skip': offset
+                    },
+                    {
+                        '$limit': limit
+                    }
+                ]
+            }
+        },
+        {
+            "$project": {
+                "data": "$data",
+                "numFound": {"$arrayElemAt": ['$total.count', 0]},
+            }
+        }
+    ]
+    return pipeline
