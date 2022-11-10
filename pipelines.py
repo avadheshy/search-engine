@@ -349,3 +349,7 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
         }
     ]
     return pipeline
+
+def get_listing_pipeline_for_mall(filter_kwargs_for_mall, sort_query, offset, limit):
+    pipeline = []
+    return pipeline
