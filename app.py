@@ -162,7 +162,7 @@ def filter_product(request: Request):
     sort_by = request_data.get('sort_by')
     user_id = request_data.get("user_id")
     type = request_data.get("type")
-    page=int(request_data.get("page")) if request_data.get("page") else 0 
+    page=int(request_data.get("page")) if request_data.get("page") else 1
     per_page = int(request_data.get("per_page")) if request_data.get("per_page") else 15
     skip = (int(page)-1)*15
     limit = per_page
@@ -183,7 +183,11 @@ def filter_product(request: Request):
         LISTING_PIPELINE=listing_pipeline_mall(filters_for,filters_for_id,store_id, brandIds,categories,sort_by,skip, limit)
         print(LISTING_PIPELINE)
         print('hello')
+        import time
+        a = time.time()
         response = DB['search_products'].aggregate(LISTING_PIPELINE).next()
+        b = time.time()
+        print("mall query time", b-a)
     else:
         LISTING_PIPELINE = listing_pipeline_retail(filters_for,filters_for_id,store_id, brandIds,categories,sort_by,skip, limit)
         print(LISTING_PIPELINE)
@@ -247,11 +251,12 @@ def filter_product(request: Request):
         
    
     count = response["total"][0] if response["total"] else {}
-    last_page=Response["total"] = count.get("count") if count else 0
-    Response['numFound']=int(last_page)
+    count= count.get("count") if count else 0
+    Response['count']=len(Response['productIds'])
+    Response['numFound']=int(count)
     Response['rows']=limit
     Response['currentPage']=page
-    Response['lastPage']=(int(last_page)+int(per_page)-1)//int(per_page)
+    Response['lastPage']=math.ceil((int(count))/limit)
     Response['filters']={"brands":brand_data,
         "categories": category_data,
         "categories_l2": None

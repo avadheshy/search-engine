@@ -2,7 +2,7 @@ import csv
 from email.mime import image
 import json
 import base64
-from pymongo import UpdateOne
+from pymongo import UpdateOne,UpdateMany
 from app import DB
 #
 # data_map = {
@@ -285,32 +285,11 @@ for i in range(1,170000,10000):
     pipeline=[
     {'$match':{'id':{'$in':ids}}},
     {
-        '$lookup': {
-            'from': 'product_tag', 
-            'localField': 'id', 
-            'foreignField': 'product_id', 
-            'as': 'data'
-        }
-    }, {
         '$project': {
             'id': 1, 
-            'name': 1, 
-            'group_id': 1, 
-            'mrp': 1, 
-            'price': 1, 
-            'barcode': 1, 
-            'status': 1, 
-            'sale_app': 1, 
-            'sale_pos': 1, 
-            'is_mall': 1, 
-            'updated_at': 1, 
-            'brand_id': 1, 
             'category_id': {
                 '$toString': '$category_id'
-            }, 
-            'chain_id': 1, 
-            'created_at': 1, 
-            'tags': '$data.tag_id'
+            }
         }
     }, {
         '$lookup': {
@@ -325,43 +304,47 @@ for i in range(1,170000,10000):
         }
     }, {
         '$project': {
+            'cat_level': '$data.cat_level', 
+            'id': 1
+        }
+    }, {
+        '$lookup': {
+            'from': 'product_tag', 
+            'localField': 'id', 
+            'foreignField': 'product_id', 
+            'as': 'data'
+        }
+    }, {
+        '$project': {
             'id': 1, 
-            'name': 1, 
-            'group_id': 1, 
-            'mrp': 1, 
-            'price': 1, 
-            'barcode': 1, 
-            'status': 1, 
-            'sale_app': 1, 
-            'sale_pos': 1, 
-            'is_mall': 1, 
-            'updated_at': 1, 
-            'brand_id': 1, 
-            'category_id': {
-                '$toInt': '$category_id'
-            }, 
-            'created_at': 1, 
-            'tags': 1, 
-            'cat_level': '$data.cat_level'
+            'cat_level': 1, 
+            'tag_ids': '$data.tag_id'
         }
     }
     ]
-    payload=list(DB['search_products'].aggregate(pipeline))
+    data=list(DB['products'].aggregate(pipeline))
+    payload=[]
+    for i in data:
+        dict_data={}
+        dict_data['cat_level']=i.get('cat_level') or None
+        dict_data['tag_ids']=i.get('tag_ids')  or []
+        payload.append(UpdateOne({'id':i.get('id')},{'$set':dict_data}))
     if payload:
-        DB['list_products'].insert_many(payload)
+        DB['search_products'].bulk_write(payload)
+        payload = []
     print(i)
     print(len(payload))
     
-'response'[
-    #count, total number of products
-    #rows,
-    #currentPage, page (bydefault 1)
-    numFound,
-    #lastPage , count/pagesize(bydefault 15)
-    # productIds,product ids
-    # groupIds , groupids
-    filters
-]
+# 'response'[
+#     #count, total number of products
+#     #rows,
+#     #currentPage, page (bydefault 1)
+#     numFound,
+#     #lastPage , count/pagesize(bydefault 15)
+#     # productIds,product ids
+#     # groupIds , groupids
+#     filters
+# ]
 
   
     

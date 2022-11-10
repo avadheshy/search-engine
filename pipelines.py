@@ -1,4 +1,4 @@
-from constants import ERROR_RESPONSE_DICT_FORMAT, S3_BRAND_URL,STORE_WH_MAP
+from constants import ERROR_RESPONSE_DICT_FORMAT, S3_BRAND_URL, STORE_WH_MAP
 
 GROUP_ADDITIONAL_STAGE = [
     {'$project': {'id': '$product_id', 'inv_qty': 1, '_id': 0, 'group_id': 1}},
@@ -24,244 +24,59 @@ GROUP_ADDITIONAL_STAGE = [
     }]
 
 
-def listing_pipeline_mall(filters_for,filters_for_id,store_id, brandIds,categories,sort_by,skip, limit):
+def listing_pipeline_mall(filters_for, filters_for_id, store_id, brandIds, categories, sort_by, skip, limit):
     wh_id = STORE_WH_MAP.get(store_id)
-    match_filter = {}
+    filter_query = {}
     sort_query = {}
-    match_filter['is_mall'] = "1"
-    match_filter['status']=1
-    category_filter={}
-    tag_filter={}
+    filter_query['is_mall'] = "1"
+    filter_query['sale_app'] = "1"
     # filter for category ids
     if categories:
-        categories=list(map(int,categories.split(',')))
-        match_filter['category_id'] = {'$in': categories}
-    #filter for brand ids
+        categories = list(map(int, categories.split(',')))
+        filter_query['category_id'] = {'$in': categories}
+    # filter for brand ids
     if brandIds:
-        brandIds=list(map(int,brandIds.split(',')))
-        match_filter['brand_id'] = {'$in': brandIds}
-    if filters_for=='cl1':
-        category_filter['cat_level']='1'
-        match_filter["category_id"]=int(filters_for_id)
-    elif filters_for=='cl2':
-        category_filter['cat_level']='2'
-        match_filter["category_id"]=int(filters_for_id)
-    elif filters_for=='cl3':
-        category_filter['cat_level']='3'
-        match_filter["category_id"]=int(filters_for_id)
-    elif filters_for=='cl4':
-        category_filter['cat_level']='4'
-        match_filter["category_id"]=int(filters_for_id)
-    elif filters_for =='brand':
-        match_filter["brand_id"]=int(filters_for_id)
-    elif filters_for=='category':
-        match_filter["category_id"]=int(filters_for_id)
-    elif filters_for=='group':
-        match_filter['group_id']=int(filters_for_id)
-    elif filters_for=='tag':
-        tag_filter['tags']=filters_for_id
-    #sorting based on given name
+        brandIds = list(map(int, brandIds.split(',')))
+        filter_query['brand_id'] = {'$in': brandIds}
+    if filters_for == 'cl1':
+        filter_query['cat_level'] = '1'
+        filter_query["category_id"] = int(filters_for_id)
+    elif filters_for == 'cl2':
+        filter_query['cat_level'] = '2'
+        filter_query["category_id"] = int(filters_for_id)
+    elif filters_for == 'cl3':
+        filter_query['cat_level'] = '3'
+        filter_query["category_id"] = int(filters_for_id)
+    elif filters_for == 'cl4':
+        filter_query['cat_level'] = '4'
+        filter_query["category_id"] = int(filters_for_id)
+    elif filters_for == 'brand':
+        filter_query["brand_id"] = int(filters_for_id)
+    elif filters_for == 'category':
+        filter_query["category_id"] = int(filters_for_id)
+    elif filters_for == 'group':
+        filter_query['group_id'] = int(filters_for_id)
+    elif filters_for == 'tag':
+        filter_query['tags'] = filters_for_id
+    # sorting based on given name
     if sort_by == 'max_price':
         sort_query['price'] = -1
     elif sort_by == 'min_price':
         sort_query['price'] = 1
     elif sort_by == 'new':
         sort_query['updated_at'] = -1
-    elif sort_by=='relevance':
+    elif sort_by == 'relevance':
         sort_query['score'] = {"$meta": "textScore"}
     else:
         sort_query['created_at'] = -1
-    
-    pipeline= [
-    {
-        '$match':match_filter
-    }, {
-        '$project': {
-            '_id': 0, 
-            'category_id': {
-                '$toString': '$category_id'
-            }, 
-            'brand_id': 1, 
-            'group_id': 1, 
-            'id': 1, 
-            'created_at': 1, 
-            'updated_at': 1, 
-            'price': 1, 
-            'str_brand_id': {
-                '$toString': '$brand_id'
-            }
-        }
-    }]
-    if tag_filter:
-        pipeline+=[{
-        '$lookup': {
-            'from': 'product_tag', 
-            'let': {
-                'productID': '$id'
-            }, 
-            'pipeline': [
-                {
-                    '$match': {
-                        '$expr': {
-                            '$eq': [
-                                '$product_id', '$$productID'
-                            ]
-                        }
-                    }
-                }, {
-                    '$project': {
-                        '_id': 0, 
-                        'tag_id': 1
-                    }
-                }
-            ], 
-            'as': 'tags'
-        }
-    },
-    {'$project':{'_id': 0, 
-            'category_id':1, 
-            'brand_id': 1, 
-            'group_id': 1, 
-            'id': 1, 
-            'created_at': 1, 
-            'updated_at': 1, 
-            'price': 1, 
-            'str_brand_id':1,
-            'tags':'$tags.tag_id'
-            }
-    },{'$match':tag_filter},
-    {'$project':{'_id': 0, 
-            'category_id':1, 
-            'brand_id': 1, 
-            'group_id': 1, 
-            'id': 1, 
-            'created_at': 1, 
-            'updated_at': 1, 
-            'price': 1, 
-            'str_brand_id':1,}}
-    ]
-    pipeline+=[{
-        '$lookup': {
-            'from': 'all_categories', 
-            'let': {
-                'categoryID': {
-                    '$ifNull': [
-                        '$category_id', None
-                    ]
-                }
-            }, 
-            'pipeline': [
-                {
-                    '$match': {
-                        '$expr': {
-                            '$eq': [
-                                '$id', '$$categoryID'
-                            ]
-                        }
-                    }
-                }, {
-                    '$project': {
-                        '_id': 0, 
-                        'id': 1, 
-                        'name': 1, 
-                        'cat_level': 1
-                    }
-                }
-            ], 
-            'as': 'all_categories_data'
-        }
-    }, {
-        '$unwind': {
-            'path': '$all_categories_data', 
-            'preserveNullAndEmptyArrays': False
-        }
-    }, {
-        '$project': {
-            '_id': 0, 
-            'id': 1, 
-            'price': {
-                '$toDouble': '$price'
-            }, 
-            'created_at': {
-                '$dateFromString': {
-                    'dateString': '$created_at'
-                }
-            }, 
-            'updated_at': {
-                '$dateFromString': {
-                    'dateString': '$updated_at'
-                }
-            }, 
-            'group_id': '$group_id', 
-            'brand_id': '$brand_id', 
-            'str_brand_id': '$str_brand_id', 
-            'category_id_in_pss': '$category_id', 
-            'tags': '$product_tag_data.tag_id', 
-            'category_id': '$all_categories_data.id', 
-            'category_name': '$all_categories_data.name', 
-            'cat_level': '$all_categories_data.cat_level'
-        }
-    }, {
-        '$match': category_filter
-    }, {
-        '$lookup': {
-            'from': 'product_warehouse_stocks', 
-            'localField': 'id', 
-            'foreignField': 'product_id', 
-            'as': 'data', 
-            'pipeline': [
-                {
-                    '$match': {
-                        'warehouse_id': '3'
-                    }
-                }
-            ]
-        }
-    }, {
-        '$unwind': {
-            'path': '$data', 
-            'preserveNullAndEmptyArrays': False
-        }
-    }, {
-        '$project': {
-            '_id': 0, 
-            'id': 1, 
-            'price': 1, 
-            'updated_at': 1, 
-            'created_at': 1, 
-            'category_id': 1, 
-            'group_id': 1, 
-            'brand_id': 1
-        }
-    }, {
-        '$sort':sort_query
-    }, {
-        '$project': {
-            'id': 1, 
-            'group_id': 1, 
-            'brand_id': 1, 
-            'category_id': 1, 
-            '_id': 0
-        }
-    }, {
-        '$facet': {
-            'total': [
-                {
-                    '$count': 'count'
-                }
-            ], 
-            'data': [
-                {
-                    '$skip': 0
-                }, {
-                    '$limit': 15
-                }
-            ]
-        }
-    }
-    ]
-    return pipeline
 
+    pipeline=[
+        {'$match':filter_query},
+        
+    ]
+   
+    
+    return pipeline
 
 
 def listing_pipeline_retail(typcasted_query_params):
@@ -270,10 +85,12 @@ def listing_pipeline_retail(typcasted_query_params):
     offset = 0
     limit = 15
     if typcasted_query_params["page"] and typcasted_query_params["per_page"]:
-        offset = (typcasted_query_params["page"] - 1) * typcasted_query_params["per_page"]
+        offset = (typcasted_query_params["page"] - 1) * \
+            typcasted_query_params["per_page"]
         limit = typcasted_query_params["per_page"]
     if typcasted_query_params.get("error_msg"):
-        error_response_dict["message"] = typcasted_query_params.get("error_msg")
+        error_response_dict["message"] = typcasted_query_params.get(
+            "error_msg")
         return error_response_dict
     if typcasted_query_params.get("type") not in ["mall", "retail"]:
         error_response_dict["message"] = "Invalid type"
@@ -305,18 +122,24 @@ def listing_pipeline_retail(typcasted_query_params):
     final_filter = {}
 
     if typcasted_query_params.get("brandIds"):
-        filter_kwargs["brand_id"] = {"$in": typcasted_query_params.get("brandIds")}
+        filter_kwargs["brand_id"] = {
+            "$in": typcasted_query_params.get("brandIds")}
     if typcasted_query_params.get("categories"):
-        filter_kwargs["category_id"] = {"$in": typcasted_query_params.get("categories")}
+        filter_kwargs["category_id"] = {
+            "$in": typcasted_query_params.get("categories")}
 
     if typcasted_query_params.get("filters_for") == "brand":
-        filter_kwargs["brand_id"] = typcasted_query_params.get("filters_for_id")
+        filter_kwargs["brand_id"] = typcasted_query_params.get(
+            "filters_for_id")
     elif typcasted_query_params.get("filters_for") == "category":
-        filter_kwargs["category_id"] = str(typcasted_query_params.get("filters_for_id"))
+        filter_kwargs["category_id"] = str(
+            typcasted_query_params.get("filters_for_id"))
     elif typcasted_query_params.get("filters_for") == "group":
-        filter_kwargs["group_id"] = typcasted_query_params.get("filters_for_id")
+        filter_kwargs["group_id"] = typcasted_query_params.get(
+            "filters_for_id")
     elif typcasted_query_params.get("filters_for") == "tag":
-        final_filter["tag_ids"] = str(typcasted_query_params.get("filters_for_id"))
+        final_filter["tag_ids"] = str(
+            typcasted_query_params.get("filters_for_id"))
 
     elif typcasted_query_params.get("filters_for") == "cl1":
         final_filter["cat_level"] = "1"
@@ -328,8 +151,8 @@ def listing_pipeline_retail(typcasted_query_params):
         final_filter["cat_level"] = "4"
 
     if typcasted_query_params.get("filters_for") in ("cl1", "cl2", "cl3", "cl4"):
-        filter_kwargs["category_id"] = typcasted_query_params.get("filters_for_id")
-
+        filter_kwargs["category_id"] = typcasted_query_params.get(
+            "filters_for_id")
 
     return [
         {
@@ -440,15 +263,15 @@ def listing_pipeline_retail(typcasted_query_params):
                 "product_id": "$product_id",
                 "price": {"$toDouble": "$price"},
                 "created_at": {
-                     "$dateFromString": {
+                    "$dateFromString": {
                         "dateString": '$created_at',
-                     }
-                  },
+                    }
+                },
                 "updated_at": {
-                     "$dateFromString": {
+                    "$dateFromString": {
                         "dateString": '$updated_at',
-                     }
-                  },
+                    }
+                },
                 # "score": {"$meta": "textScore"},
                 "group_id": "$group_id",
                 "brand_id": "$brand_id",
