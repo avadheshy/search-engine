@@ -1,4 +1,4 @@
-from pymongo import MongoClient
+from pymongo import MongoClient,UpdateMany,UpdateOne
 import sentry_sdk
 
 CLIENT = MongoClient("mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")

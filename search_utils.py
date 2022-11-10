@@ -17,10 +17,11 @@ class SearchUtils:
                         removed_duplicates_map[key] = value
                         b_data["count"] = value
                         array_with_count.append(b_data)
+        print(array_with_count)
         return array_with_count
 
     @classmethod
-    def make_category_data(cls, category_data):
+    def make_category_data(cls, category_data,dict_category_id):
         category_data_to_return = None
         if category_data:
             category_data_to_return = []
@@ -31,12 +32,13 @@ class SearchUtils:
                     name=data.get('name'),
                     logo=logo_icon,
                     icon=logo_icon,
-                    type="category"
+                    count=dict_category_id.get(data.get('id'))
+                    
                 ))
         return category_data_to_return
 
     @classmethod
-    def make_brand_data(cls, brand_data):
+    def make_brand_data(cls, brand_data,dict_brand_id):
         brand_data_to_return = None
         if brand_data:
             brand_data_to_return = []
@@ -47,7 +49,9 @@ class SearchUtils:
                     name=data.get('name'),
                     logo=logo_icon,
                     icon=logo_icon,
-                    type="brand"
+                    count=dict_brand_id.get(data.get('id')),
+                    type="brand",
+                    filter_key= "brandIds[]",
                 ))
         return brand_data_to_return
 
