@@ -474,51 +474,49 @@ def product_listing(request: Request):
     # return request_response
 
 
-@app.get("/v1/product-listing/")
-def product_listing__v2(request: Request):
+@app.post("/v1/product-listing/")
+async def product_listing_v1(request: Request):
     error_response_dict = ERROR_RESPONSE_DICT_FORMAT
-    request_data = dict(request.query_params.items())
+    request_data = await request.json()
 
-    def get_typcasted_query_params(request_data):
-        typcasted_query_params = dict()
+    def get_typcasted_data(request_data):
+        typcasted_data = dict()
         try:
-            typcasted_query_params["store_id"] = request_data.get("store_id")
-            typcasted_query_params["page"] = int(request_data.get('page')) if request_data.get('page') else 1
-            typcasted_query_params["per_page"] = int(request_data.get('per_page')) if request_data.get(
+            typcasted_data["store_id"] = str(request_data.get("store_id"))
+            typcasted_data["page"] = int(request_data.get('page')) if request_data.get('page') else 1
+            typcasted_data["per_page"] = int(request_data.get('per_page')) if request_data.get(
                 'per_page') else 15
-            typcasted_query_params["filters_for"] = request_data.get("filters_for")
-            typcasted_query_params["filter_id"] = int(request_data.get("filter_id"))
-            typcasted_query_params["sort_by"] = request_data.get("sort_by")
-            typcasted_query_params["type"] = request_data.get("type")
-            if request_data.get("brandIds"):
-                typcasted_query_params["brandIds"] = str(request_data.get("brandIds")).split(",")
-                typcasted_query_params["brandIds"] = list(map(int, typcasted_query_params["brandIds"])) or []
-            if request_data.get("categories"):
-                typcasted_query_params["categories"] = str(request_data.get("categories")).split(",")
-                typcasted_query_params["categories"] = list(map(int, typcasted_query_params["categories"])) or []
+            typcasted_data["filters_for"] = request_data.get("filters_for")
+            typcasted_data["filter_id"] = int(request_data.get("filter_id"))
+            typcasted_data["sort_by"] = request_data.get("sort_by")
+            typcasted_data["type"] = request_data.get("type")
+            if isinstance(request_data.get("brandIds"), list):
+                typcasted_data["brandIds"] = list(map(int, request_data.get("brandIds")))
+            if isinstance(request_data.get("categories"), list):
+                typcasted_data["categories"] = list(map(int, request_data.get("categories")))
         except Exception as error:
-            typcasted_query_params["error_msg"] = f"{error}"
-        return typcasted_query_params
+            typcasted_data["error_msg"] = f"{error}"
+        return typcasted_data
 
-    typcasted_query_params = get_typcasted_query_params(request_data)
-    sort_by = typcasted_query_params.get("sort_by")
+    typcasted_data = get_typcasted_data(request_data)
+    sort_by = typcasted_data.get("sort_by")
     offset = 0
     limit = 15
-    if typcasted_query_params["page"] and typcasted_query_params["per_page"]:
-        offset = (typcasted_query_params["page"] - 1) * typcasted_query_params["per_page"]
-        limit = typcasted_query_params["per_page"]
-    if typcasted_query_params.get("error_msg"):
-        error_response_dict["message"] = typcasted_query_params.get("error_msg")
+    if typcasted_data["page"] and typcasted_data["per_page"]:
+        offset = (typcasted_data["page"] - 1) * typcasted_data["per_page"]
+        limit = typcasted_data["per_page"]
+    if typcasted_data.get("error_msg"):
+        error_response_dict["message"] = typcasted_data.get("error_msg")
         return error_response_dict
-    if typcasted_query_params.get("type") not in ["mall", "retail"]:
+    if typcasted_data.get("type") not in ["mall", "retail"]:
         error_response_dict["message"] = "Invalid type"
         return error_response_dict
-    if typcasted_query_params.get("filters_for") not in ["brand", "category", "tag", "group", "cl1",
-                                                         "cl2", "cl3", "cl4"]:
+    if typcasted_data.get("filters_for") not in ["brand", "category", "tag", "group", "cl1",
+                                                 "cl2", "cl3", "cl4"]:
         error_response_dict["message"] = "Invalid filters_for"
         return error_response_dict
-    if typcasted_query_params.get("sort_by") not in ["new", "min_price", "max_price", "popular", "relevance",
-                                                     "product_created_at"]:
+    if typcasted_data.get("sort_by") not in ["new", "min_price", "max_price", "popular", "relevance",
+                                             "product_created_at"]:
         error_response_dict["message"] = "Invalid sort_by"
         return error_response_dict
 
@@ -536,58 +534,58 @@ def product_listing__v2(request: Request):
         sort_query['created_at'] = -1
 
     filter_kwargs = dict(
-        store_id=typcasted_query_params["store_id"],
+        store_id=typcasted_data["store_id"],
         is_mall="0",
         status="1"
     )
-    
-    warehouse_id = STORE_WH_MAP.get(typcasted_query_params.get("store_id"))
+
+    warehouse_id = STORE_WH_MAP.get(typcasted_data.get("store_id"))
     filter_kwargs_for_mall = dict(
         is_mall="1",
         status=1
     )
 
     only_brand_data, only_category_data, both_brand_and_category_data = False, False, False
-    if typcasted_query_params.get("brandIds"):
+    if typcasted_data.get("brandIds"):
         only_category_data = True
-        filter_kwargs["brand_id"] = {"$in": typcasted_query_params.get("brandIds")}
-        filter_kwargs_for_mall["brand_id"] = {"$in": typcasted_query_params.get("brandIds")}
-    if typcasted_query_params.get("categories"):
+        filter_kwargs["brand_id"] = {"$in": typcasted_data.get("brandIds")}
+        filter_kwargs_for_mall["brand_id"] = {"$in": typcasted_data.get("brandIds")}
+    if typcasted_data.get("categories"):
         only_brand_data = True
-        filter_kwargs["category_id"] = {"$in": typcasted_query_params.get("categories")}
-        filter_kwargs_for_mall["category_id"] = {"$in": typcasted_query_params.get("categories")}
+        filter_kwargs["category_id"] = {"$in": typcasted_data.get("categories")}
+        filter_kwargs_for_mall["category_id"] = {"$in": typcasted_data.get("categories")}
 
-    if typcasted_query_params.get("filters_for") == "brand":
+    if typcasted_data.get("filters_for") == "brand":
         only_category_data = True
-        filter_kwargs["brand_id"] = typcasted_query_params.get("filter_id")
-        filter_kwargs_for_mall["brand_id"] = typcasted_query_params.get("filter_id")
-    elif typcasted_query_params.get("filters_for") == "category":
+        filter_kwargs["brand_id"] = typcasted_data.get("filter_id")
+        filter_kwargs_for_mall["brand_id"] = typcasted_data.get("filter_id")
+    elif typcasted_data.get("filters_for") == "category":
         only_brand_data = True
-        filter_kwargs["category_id"] = typcasted_query_params.get("filter_id")
-        filter_kwargs_for_mall["category_id"] = typcasted_query_params.get("filter_id")
-    elif typcasted_query_params.get("filters_for") == "group":
+        filter_kwargs["category_id"] = typcasted_data.get("filter_id")
+        filter_kwargs_for_mall["category_id"] = typcasted_data.get("filter_id")
+    elif typcasted_data.get("filters_for") == "group":
         both_brand_and_category_data = True
-        filter_kwargs["group_id"] = typcasted_query_params.get("filter_id")
-        filter_kwargs_for_mall["group_id"] = typcasted_query_params.get("filter_id")
-    elif typcasted_query_params.get("filters_for") == "tag":
+        filter_kwargs["group_id"] = typcasted_data.get("filter_id")
+        filter_kwargs_for_mall["group_id"] = typcasted_data.get("filter_id")
+    elif typcasted_data.get("filters_for") == "tag":
         both_brand_and_category_data = True
-        filter_kwargs["tag_ids"] = str(typcasted_query_params.get("filter_id"))
-        filter_kwargs_for_mall["tag_ids"] = str(typcasted_query_params.get("filter_id"))
-    elif typcasted_query_params.get("filters_for") in ("cl1", "cl2", "cl3", "cl4"):
+        filter_kwargs["tag_ids"] = str(typcasted_data.get("filter_id"))
+        filter_kwargs_for_mall["tag_ids"] = str(typcasted_data.get("filter_id"))
+    elif typcasted_data.get("filters_for") in ("cl1", "cl2", "cl3", "cl4"):
         only_brand_data = True
-        filter_kwargs["cat_level"] = CATEGORY_LEVEL_MAPPING.get(typcasted_query_params.get("filters_for"))
-        filter_kwargs["category_id"] = typcasted_query_params.get("filter_id")
-        filter_kwargs_for_mall["cat_level"] = CATEGORY_LEVEL_MAPPING.get(typcasted_query_params.get("filters_for"))
-        filter_kwargs_for_mall["category_id"] = typcasted_query_params.get("filter_id")
+        filter_kwargs["cat_level"] = CATEGORY_LEVEL_MAPPING.get(typcasted_data.get("filters_for"))
+        filter_kwargs["category_id"] = typcasted_data.get("filter_id")
+        filter_kwargs_for_mall["cat_level"] = CATEGORY_LEVEL_MAPPING.get(typcasted_data.get("filters_for"))
+        filter_kwargs_for_mall["category_id"] = typcasted_data.get("filter_id")
 
     print("filter_kwargs : ", filter_kwargs)
     print("filter_kwargs_for_mall : ", filter_kwargs_for_mall)
 
     data = []
-    if typcasted_query_params.get("type") == "retail":
+    if typcasted_data.get("type") == "retail":
         pipeline = get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit)
         data = list(SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipeline))
-    elif typcasted_query_params.get("type") == "mall":
+    elif typcasted_data.get("type") == "mall":
         pipeline = get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, offset, limit)
         data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
 
@@ -622,10 +620,10 @@ def product_listing__v2(request: Request):
 
     final_result = {
         "count": len(data_to_return),
-        "rows": typcasted_query_params.get("per_page"),
-        "currentPage": typcasted_query_params.get("page"),
+        "rows": typcasted_data.get("per_page"),
+        "currentPage": typcasted_data.get("page"),
         "numFound": num_found,
-        "lastPage": math.ceil(num_found/typcasted_query_params.get("per_page")),
+        "lastPage": math.ceil(num_found / typcasted_data.get("per_page")),
         "productIds": [int(product.get('product_id')) for product in data_to_return],
         "groupIds": [product.get('group_id') for product in data_to_return],
         "filters": {

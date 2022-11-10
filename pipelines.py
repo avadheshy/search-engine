@@ -431,5 +431,4 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
         }
     ]
 
-    print(pipeline)
     return pipeline
