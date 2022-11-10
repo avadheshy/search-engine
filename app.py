@@ -140,7 +140,7 @@ def filter_product(request: Request):
     return response
 
 
-@app.get("/v1/product-listing/")
+@app.get("/Dummy-code")
 def product_listing(request: Request):
     error_response_dict = ERROR_RESPONSE_DICT_FORMAT
     request_data = dict(request.query_params.items())
@@ -474,7 +474,7 @@ def product_listing(request: Request):
     # return request_response
 
 
-@app.get("/v2/product-listing/")
+@app.get("/v1/product-listing/")
 def product_listing__v2(request: Request):
     error_response_dict = ERROR_RESPONSE_DICT_FORMAT
     request_data = dict(request.query_params.items())
