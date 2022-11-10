@@ -26,7 +26,7 @@ class SearchUtils:
         if category_data:
             category_data_to_return = []
             for data in category_data:
-                logo_icon = f"category_url/{data.get('id')}/{data.get('logo')}" if data.get('logo') else None
+                logo_icon = f"category_url/{data.get('id')}/{data.get('icon')}" if data.get('icon') else None
                 category_data_to_return.append(dict(
                     id=data.get('id'),
                     name=data.get('name'),

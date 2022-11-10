@@ -414,7 +414,7 @@ async def product_listing_v1(request: Request):
     if both_brand_and_category_data:
         brand_data = list(DB["brands"].find(brand_filter, brand_projection)) or []
         category_data = list(DB["all_categories"].find(category_filter, category_projection)) or []
-
+    # print(category_data)
     brand_data_to_return = SearchUtils.make_brand_data(brand_data,dict_brand_ids)
     category_data_to_return = SearchUtils.make_category_data(category_data,dict_category_ids)
     
