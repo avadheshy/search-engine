@@ -351,7 +351,7 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
         }
     ]
     if sort_query:
-        pipeline[-3]={'$sort':sort_query}
+        pipeline.insert(-3,{'$sort':sort_query})
     return pipeline
 
 
@@ -432,8 +432,9 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
             }
         }
     ]
+    print('hello')
     if sort_query:
-        pipeline[-3]={'$sort':sort_query}
+        pipeline.insert(-3,{'$sort':sort_query})
 
     return pipeline
 

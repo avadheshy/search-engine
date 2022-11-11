@@ -274,7 +274,7 @@ def store_warehouse_map(request: Request):
     # return request_response
 
 
-@app.post("/v2/product-listing/")
+@app.post("/v1/product-listing/")
 async def product_listing_v1(request: Request):
     error_response_dict = ERROR_RESPONSE_DICT_FORMAT
     request_data = await request.json()
@@ -389,8 +389,10 @@ async def product_listing_v1(request: Request):
         data = list(DB["product_store_sharded"].aggregate(pipeline))
     elif typcasted_data.get("type") == "mall":
         pipeline = get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, offset, limit)
+        print(pipeline)
         data = list(DB["search_products"].aggregate(pipeline))
     data_to_return = data[0].get("data")
+    # print(data_to_return)
     num_found = data[0].get("numFound") or 0
     brand_ids = list(([str(product.get('brand_id')) for product in data_to_return if product.get('brand_id')])) 
     category_ids = list(([str(product.get('category_id')) for product in data_to_return if product.get('category_id')]))
