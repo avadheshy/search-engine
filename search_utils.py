@@ -21,7 +21,7 @@ class SearchUtils:
         return array_with_count
 
     @classmethod
-    def make_category_data(cls, category_data,dict_category_id):
+    def make_category_data(cls, category_data,dict_category_id,category_ids_input):
         category_data_to_return = None
         if category_data:
             category_data_to_return = []
@@ -30,6 +30,7 @@ class SearchUtils:
                 category_data_to_return.append(dict(
                     id=data.get('id'),
                     name=data.get('name'),
+                    active=True if int(data.get('id')) in category_ids_input else False,
                     logo=logo_icon,
                     icon=logo_icon,
                     count=dict_category_id.get(data.get('id'))
@@ -38,8 +39,9 @@ class SearchUtils:
         return category_data_to_return
 
     @classmethod
-    def make_brand_data(cls, brand_data,dict_brand_id):
+    def make_brand_data(cls, brand_data,dict_brand_id,brand_ids_input):
         brand_data_to_return = None
+        print(brand_ids_input)
         if brand_data:
             brand_data_to_return = []
             for data in brand_data:
@@ -47,6 +49,7 @@ class SearchUtils:
                 brand_data_to_return.append(dict(
                     id=data.get('id'),
                     name=data.get('name'),
+                    active=True if int(data.get('id')) in brand_ids_input else False,
                     logo=logo_icon,
                     icon=logo_icon,
                     count=dict_brand_id.get(data.get('id')),
