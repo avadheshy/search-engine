@@ -142,7 +142,7 @@ async def product_listing_v1(request: Request):
             typcasted_data["per_page"] = int(request_data.get('per_page')) if request_data.get(
                 'per_page') else 15
             typcasted_data["filters_for"] = request_data.get("filters_for")
-            typcasted_data["filters_for_id"] = int(request_data.get("filters_for_id"))
+            typcasted_data["filter_id"] = int(request_data.get("filter_id"))
             typcasted_data["sort_by"] = request_data.get("sort_by") if request_data.get("sort_by") else None
             typcasted_data["type"] = request_data.get("type")
             if isinstance(request_data.get("brandIds"), list):
@@ -217,29 +217,29 @@ async def product_listing_v1(request: Request):
         category_ids_input.extend(typcasted_data.get("categories"))
     if typcasted_data.get("filters_for") == "brand":
         only_category_data = True
-        filter_kwargs["brand_id"] = typcasted_data.get("filters_for_id")
-        filter_kwargs_for_mall["brand_id"] = typcasted_data.get("filters_for_id")
-        brand_ids_input.append(typcasted_data.get("filters_for_id"))
+        filter_kwargs["brand_id"] = typcasted_data.get("filter_id")
+        filter_kwargs_for_mall["brand_id"] = typcasted_data.get("filter_id")
+        brand_ids_input.append(typcasted_data.get("filter_id"))
     elif typcasted_data.get("filters_for") == "category":
         only_brand_data = True
-        filter_kwargs["category_id"] = typcasted_data.get("filters_for_id")
-        filter_kwargs_for_mall["category_id"] = get_typcasted_data.get("filters_for_id")
-        category_ids_input.append(get_typcasted_data.get("filters_for_id"))
+        filter_kwargs["category_id"] = typcasted_data.get("filter_id")
+        filter_kwargs_for_mall["category_id"] = get_typcasted_data.get("filter_id")
+        category_ids_input.append(get_typcasted_data.get("filter_id"))
     elif typcasted_data.get("filters_for") == "group":
         both_brand_and_category_data = True
-        filter_kwargs["group_id"] = typcasted_data.get("filters_for_id")
-        filter_kwargs_for_mall["group_id"] = typcasted_data.get("filters_for_id")
+        filter_kwargs["group_id"] = typcasted_data.get("filter_id")
+        filter_kwargs_for_mall["group_id"] = typcasted_data.get("filter_id")
     elif typcasted_data.get("filters_for") == "tag":
         both_brand_and_category_data = True
-        filter_kwargs["tag_ids"] = str(typcasted_data.get("filters_for_id"))
-        filter_kwargs_for_mall["tag_ids"] = str(typcasted_data.get("filters_for_id"))
+        filter_kwargs["tag_ids"] = str(typcasted_data.get("filter_id"))
+        filter_kwargs_for_mall["tag_ids"] = str(typcasted_data.get("filter_id"))
     elif typcasted_data.get("filters_for") in ("cl1", "cl2", "cl3", "cl4"):
         only_brand_data = True
         filter_kwargs["cat_level"] = CATEGORY_LEVEL_MAPPING.get(typcasted_data.get("filters_for"))
-        filter_kwargs["category_id"] = typcasted_data.get("filters_for_id")
+        filter_kwargs["category_id"] = typcasted_data.get("filter_id")
         filter_kwargs_for_mall["cat_level"] = CATEGORY_LEVEL_MAPPING.get(typcasted_data.get("filters_for"))
-        filter_kwargs_for_mall["category_id"] = typcasted_data.get("filters_for_id")
-        category_ids_input.append(typcasted_data.get("filters_for_id"))
+        filter_kwargs_for_mall["category_id"] = typcasted_data.get("filter_id")
+        category_ids_input.append(typcasted_data.get("filter_id"))
 
     
     if typcasted_data.get("type") == "retail":
