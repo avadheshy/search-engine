@@ -290,6 +290,7 @@ async def product_listing_v1(request: Request):
             "categories": category_data_to_return
         }
     }
+    DB['product_listing_log'].insert_one({'request':typcasted_data,'response':final_result})
     return final_result
 
 
