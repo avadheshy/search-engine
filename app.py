@@ -223,8 +223,8 @@ async def product_listing_v1(request: Request):
     elif typcasted_data.get("filters_for") == "category":
         only_brand_data = True
         filter_kwargs["category_id"] = typcasted_data.get("filter_id")
-        filter_kwargs_for_mall["category_id"] = get_typcasted_data.get("filter_id")
-        category_ids_input.append(get_typcasted_data.get("filter_id"))
+        filter_kwargs_for_mall["category_id"] = typcasted_data.get("filter_id")
+        category_ids_input.append(typcasted_data.get("filter_id"))
     elif typcasted_data.get("filters_for") == "group":
         both_brand_and_category_data = True
         filter_kwargs["group_id"] = typcasted_data.get("filter_id")
