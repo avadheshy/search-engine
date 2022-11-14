@@ -74,17 +74,21 @@ def product_search_v2(request: Request):
     platform = request_data.get("platform")  # pos / app
     skip = int(request_data.get("skip")) if request_data.get("skip") else 0
     limit = int(request_data.get("limit")) if request_data.get("limit") else 10
-
-    # MongoDB Aggregation Pipeline
-    pipe_line = group_autocomplete_stage(
-        keyword, store_id, platform, order_type, skip, limit
-    )
-
-    # DB Query
-    if order_type == 'mall':
-        response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
+    is_group=request_data.get("is_group")
+    if is_group=='0':
+        pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
+        if order_type == 'mall':
+            response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
+        else:
+            response = SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipe_line).next()
     else:
-        response = SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipe_line).next()
+        pipe_line = group_autocomplete_stage(
+            keyword, store_id, platform, order_type, skip, limit
+        )
+        if order_type == 'mall':
+            response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
+        else:
+            response = SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipe_line).next()
 
     # Response Formatting
     response["data"] = (
