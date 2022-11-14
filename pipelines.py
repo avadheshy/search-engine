@@ -315,10 +315,10 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
                         "dateString": '$updated_at',
                     }
                 },
-                # "score": {"$meta": "textScore"},
                 "group_id": "$group_id",
                 "brand_id": "$brand_id",
-                "category_id": "$category_id"
+                "category_id": "$category_id",
+                "cl2_id": "$cl2_id"
             }
         },
         {
@@ -329,9 +329,6 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
                     }
                 ],
                 'data': [
-                    {
-                        "$sort": sort_query
-                    },
                     {
                         '$skip': offset
                     },
@@ -348,6 +345,8 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
             }
         }
     ]
+    if sort_query:
+        pipeline.insert(-3,{'$sort':sort_query})
     return pipeline
 
 
@@ -400,7 +399,8 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
                     "$toInt": "$group_id"
                 },
                 "brand_id": "$brand_id",
-                "category_id": "$category_id"
+                "category_id": "$category_id",
+                "cl2_id": "$cl2_id"
             }
         },
         {
@@ -411,9 +411,6 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
                     }
                 ],
                 'data': [
-                    {
-                        '$sort': sort_query
-                    },
                     {
                         '$skip': offset
                     },
@@ -430,5 +427,7 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
             }
         }
     ]
+    if sort_query:
+        pipeline.insert(-3, {'$sort':sort_query})
 
     return pipeline
