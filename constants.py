@@ -5,11 +5,7 @@ ERROR_RESPONSE_DICT_FORMAT = {
     "data": None
 }
 S3_BRAND_URL = "https://s3-ap-south-1.amazonaws.com/niyoos-test/media/brand/"
-ERROR_RESPONSE_DICT_FORMAT = {
-    "status": False,
-    "message": None,
-    "data": None
-}
+
 CATEGORY_LEVEL_MAPPING = {
     "cl1": "1",
     "cl2": "2",
