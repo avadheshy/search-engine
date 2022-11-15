@@ -2,14 +2,22 @@ from collections import Counter
 from datetime import datetime
 import json
 import math
-from fastapi import FastAPI, Request
+from typing import Union, List
+
+from fastapi import FastAPI, Request, Header
 
 from constants import ERROR_RESPONSE_DICT_FORMAT, CATEGORY_LEVEL_MAPPING, STORE_WH_MAP
-from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline, get_listing_pipeline_for_retail, get_listing_pipeline_for_mall
+from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline, get_listing_pipeline_for_retail, \
+    get_listing_pipeline_for_mall
 from settings import SHARDED_SEARCH_DB
 from search_utils import SearchUtils
 
 app = FastAPI()
+
+
+@app.get("/")
+async def read_main():
+    return {"msg": "Hello World"}
 
 
 @app.post("/v1/search")
@@ -74,8 +82,8 @@ def product_search_v2(request: Request):
     platform = request_data.get("platform")  # pos / app
     skip = int(request_data.get("skip")) if request_data.get("skip") else 0
     limit = int(request_data.get("limit")) if request_data.get("limit") else 10
-    is_group=request_data.get("is_group")
-    if is_group=='0':
+    is_group = request_data.get("is_group")
+    if is_group == '0':
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
@@ -346,15 +354,15 @@ def product_listing(request: Request):
                 "product_id": "$product_id",
                 "price": {"$toDouble": "$price"},
                 "created_at": {
-                     "$dateFromString": {
+                    "$dateFromString": {
                         "dateString": '$created_at',
-                     }
-                  },
+                    }
+                },
                 "updated_at": {
-                     "$dateFromString": {
+                    "$dateFromString": {
                         "dateString": '$updated_at',
-                     }
-                  },
+                    }
+                },
                 # "score": {"$meta": "textScore"},
                 "group_id": "$group_id",
                 "brand_id": "$brand_id",
@@ -441,7 +449,7 @@ def product_listing(request: Request):
         "rows": typcasted_query_params.get("per_page"),
         "currentPage": typcasted_query_params.get("page"),
         "numFound": num_found,
-        "lastPage": math.ceil(num_found/typcasted_query_params.get("per_page")),
+        "lastPage": math.ceil(num_found / typcasted_query_params.get("per_page")),
         "productIds": [int(product.get('product_id')) for product in data_to_return],
         "groupIds": [product.get('group_id') for product in data_to_return],
         # "data": data_to_return,
@@ -481,9 +489,10 @@ def product_listing(request: Request):
 
 
 @app.post("/v1/product-listing/")
-async def product_listing_v1(request: Request):
+async def product_listing_v1(request: Request, x_source: Union[str, None] = Header(default=None)):
     error_response_dict = ERROR_RESPONSE_DICT_FORMAT
     request_data = await request.json()
+
     def get_typcasted_data(request_data):
         typcasted_data = dict()
         try:
@@ -497,7 +506,7 @@ async def product_listing_v1(request: Request):
             typcasted_data["type"] = request_data.get("type")
             if isinstance(request_data.get("brandIds"), list):
                 typcasted_data["brandIds"] = list(map(int, request_data.get("brandIds")))
-            
+
             if isinstance(request_data.get("categories"), list):
                 typcasted_data["categories"] = list(map(int, request_data.get("categories")))
         except Exception as error:
@@ -511,7 +520,7 @@ async def product_listing_v1(request: Request):
     sort_by = typcasted_data.get("sort_by")
     offset = 0
     limit = 15
-    
+
     if typcasted_data["page"] and typcasted_data["per_page"]:
         offset = (typcasted_data["page"] - 1) * typcasted_data["per_page"]
         limit = typcasted_data["per_page"]
@@ -548,14 +557,14 @@ async def product_listing_v1(request: Request):
         is_mall="0",
         status="1"
     )
-    
+
     warehouse_id = STORE_WH_MAP.get(typcasted_data.get("store_id"))
     filter_kwargs_for_mall = dict(
         is_mall="1",
         status=1
     )
-    brand_ids_input=[]
-    category_ids_input=[]
+    brand_ids_input = []
+    category_ids_input = []
     only_brand_data, only_category_data, both_brand_and_category_data = False, False, False
     if typcasted_data.get("brandIds"):
         only_category_data = True
@@ -593,7 +602,6 @@ async def product_listing_v1(request: Request):
         filter_kwargs_for_mall["category_id"] = typcasted_data.get("filter_id")
         category_ids_input.append(typcasted_data.get("filter_id"))
 
-    
     if typcasted_data.get("type") == "retail":
         pipeline = get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit)
         # print(pipeline)
@@ -605,10 +613,10 @@ async def product_listing_v1(request: Request):
     data_to_return = data[0].get("data")
     # print(data_to_return)
     num_found = data[0].get("numFound") or 0
-    brand_ids = list(([str(product.get('brand_id')) for product in data_to_return if product.get('brand_id')])) 
+    brand_ids = list(([str(product.get('brand_id')) for product in data_to_return if product.get('brand_id')]))
     category_ids = list(([str(product.get('category_id')) for product in data_to_return if product.get('category_id')]))
-    dict_brand_ids=Counter(brand_ids)
-    dict_category_ids=Counter(category_ids)
+    dict_brand_ids = Counter(brand_ids)
+    dict_category_ids = Counter(category_ids)
     brand_filter = {
         "id": {"$in": list(dict_brand_ids.keys())}
     }
@@ -626,21 +634,39 @@ async def product_listing_v1(request: Request):
     if both_brand_and_category_data:
         brand_data = list(SHARDED_SEARCH_DB["brands"].find(brand_filter, brand_projection)) or []
         category_data = list(SHARDED_SEARCH_DB["all_categories"].find(category_filter, category_projection)) or []
-    brand_data_to_return = SearchUtils.make_brand_data(brand_data, dict_brand_ids,brand_ids_input)
-    category_data_to_return = SearchUtils.make_category_data(category_data,dict_category_ids, category_ids_input)
-    
+    brand_data_to_return = SearchUtils.make_brand_data(brand_data, dict_brand_ids, brand_ids_input)
+    category_data_to_return = SearchUtils.make_category_data(category_data, dict_category_ids, category_ids_input)
+
+    if x_source == "android_app":
+        filters_data = [
+            {
+                "name": "Brands",
+                "key": "brand",
+                "data": brand_data_to_return
+            },
+            {
+                "name": "Categories",
+                "key": "category",
+                "data": category_data_to_return
+            }
+        ]
+    else:
+        filters_data = {
+            "brands": brand_data_to_return,
+            "categories": category_data_to_return
+        }
+
     final_result = {
         "count": len(data_to_return),
         "rows": typcasted_data.get("per_page"),
         "currentPage": typcasted_data.get("page"),
         "numFound": num_found,
-        "lastPage": math.ceil(num_found/typcasted_data.get("per_page")),
+        "lastPage": math.ceil(num_found / typcasted_data.get("per_page")),
         "productIds": [int(product.get('product_id')) for product in data_to_return],
         "groupIds": [product.get('group_id') for product in data_to_return],
-        "filters": {
-            "brands": brand_data_to_return,
-            "categories": category_data_to_return
-        }
+        "filters": filters_data
     }
-    SHARDED_SEARCH_DB['product_listing_log'].insert_one({'request':typcasted_data,'response':final_result, 'created_at': datetime.now()})
+
+    SHARDED_SEARCH_DB['product_listing_log'].insert_one(
+        {'request': typcasted_data, 'response': final_result, 'created_at': datetime.now()})
     return final_result
