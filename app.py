@@ -668,7 +668,7 @@ async def product_listing_v1(request: Request):
         "filters": filters_data
     }
 
-    log_payload = {'created_at': datetime.now(), 'headers': {"x_source": x_source}, 'request': typcasted_data,
+    log_payload = {'created_at': datetime.now(), 'headers': {"x_source": x_source}, 'request': request_data,
                    'response': final_result}
     SHARDED_SEARCH_DB['product_listing_log'].insert_one(log_payload)
     return final_result
