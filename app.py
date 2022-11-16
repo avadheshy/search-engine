@@ -488,7 +488,7 @@ def product_listing(request: Request):
     # return request_response
 
 
-@app.post("/v1/product-listing/")
+@app.post("/v1/product-listing")
 async def product_listing_v1(request: Request):
     error_response_dict = ERROR_RESPONSE_DICT_FORMAT
     request_data = await request.json()
@@ -505,11 +505,13 @@ async def product_listing_v1(request: Request):
             typcasted_data["filter_id"] = int(request_data.get("filter_id"))
             typcasted_data["sort_by"] = request_data.get("sort_by") if request_data.get("sort_by") else None
             typcasted_data["type"] = request_data.get("type")
-            if isinstance(request_data.get("brandIds"), list):
-                typcasted_data["brandIds"] = list(map(int, request_data.get("brandIds")))
+            if isinstance(request_data.get("brandIds"), dict):
+                typcasted_data["brandIds"] = list(map(int, request_data.get("brandIds").values())) if request_data.get(
+                    "brandIds") else None
 
-            if isinstance(request_data.get("categories"), list):
-                typcasted_data["categories"] = list(map(int, request_data.get("categories")))
+            if isinstance(request_data.get("categories"), dict):
+                typcasted_data["categories"] = list(
+                    map(int, request_data.get("categories").values())) if request_data.get("categories") else None
         except Exception as error:
             typcasted_data["error_msg"] = f"{error}"
         return typcasted_data
