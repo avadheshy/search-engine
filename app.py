@@ -618,11 +618,11 @@ async def product_listing_v1(request: Request, x_source: Union[str, None] = Head
     dict_brand_ids = Counter(brand_ids)
     dict_category_ids = Counter(category_ids)
     brand_filter = {
-        "id": {"$in": list(dict_brand_ids.keys())}
+        "id": {"$in": brand_ids}
     }
     brand_projection = {"_id": 0, "id": 1, "name": 1, "logo": 1}
     category_filter = {
-        "id": {"$in": list(dict_category_ids.keys())},
+        "id": {"$in": category_ids},
         "cat_level": "2"
     }
     category_projection = {"_id": 0, "id": 1, "name": 1, "icon": 1}
@@ -668,5 +668,5 @@ async def product_listing_v1(request: Request, x_source: Union[str, None] = Head
     }
 
     SHARDED_SEARCH_DB['product_listing_log'].insert_one(
-        {'request': typcasted_data, 'response': final_result, 'created_at': datetime.now()})
+        {'headers': {"x_source": x_source}, 'request': typcasted_data, 'response': final_result, 'created_at': datetime.now()})
     return final_result
