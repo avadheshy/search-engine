@@ -492,7 +492,7 @@ def product_listing(request: Request):
 async def product_listing_v1(request: Request):
     error_response_dict = ERROR_RESPONSE_DICT_FORMAT
     request_data = await request.json()
-    x_source = request.headers.get('x-source')
+    x_source = request_data.get('x_source')
 
     def get_typcasted_data(request_data):
         typcasted_data = dict()
