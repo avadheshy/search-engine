@@ -489,9 +489,10 @@ def product_listing(request: Request):
 
 
 @app.post("/v1/product-listing/")
-async def product_listing_v1(request: Request, x_source: Union[str, None] = Header(default=None)):
+async def product_listing_v1(request: Request):
     error_response_dict = ERROR_RESPONSE_DICT_FORMAT
     request_data = await request.json()
+    x_source = request.headers.get('x-source')
 
     def get_typcasted_data(request_data):
         typcasted_data = dict()
@@ -667,6 +668,7 @@ async def product_listing_v1(request: Request, x_source: Union[str, None] = Head
         "filters": filters_data
     }
 
-    SHARDED_SEARCH_DB['product_listing_log'].insert_one(
-        {'headers': {"x_source": x_source}, 'request': typcasted_data, 'response': final_result, 'created_at': datetime.now()})
+    log_payload = {'created_at': datetime.now(), 'headers': {"x_source": x_source}, 'request': typcasted_data,
+                   'response': final_result}
+    SHARDED_SEARCH_DB['product_listing_log'].insert_one(log_payload)
     return final_result
