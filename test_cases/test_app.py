@@ -13,7 +13,7 @@ def test_read_main():
 
 def test_product_listing_v1_for_mall():
     response = client.post(
-        url="/v1/product-listing/",
+        url="/v1/product-listing",
         json={
             "store_id": "64",
             "page": "1",
@@ -22,7 +22,9 @@ def test_product_listing_v1_for_mall():
             "sort_by": "min_price",
             "type": "mall",
             "per_page": 10,
-            "brandIds": [1662],
+            "brandIds": {
+                "0": "1662"
+            },
             "categories": None
         },
     )
@@ -46,7 +48,7 @@ def test_product_listing_v1_for_mall():
 
 def test_product_listing_v1_for_mall_and_source_android_app():
     response = client.post(
-        url="/v1/product-listing/",
+        url="/v1/product-listing",
         json={
             "store_id": "64",
             "page": "1",
@@ -55,7 +57,9 @@ def test_product_listing_v1_for_mall_and_source_android_app():
             "sort_by": "min_price",
             "type": "mall",
             "per_page": 10,
-            "brandIds": [1662],
+            "brandIds": {
+                "0": "1662"
+            },
             "categories": None,
             "x_source": "android_app"
         },
