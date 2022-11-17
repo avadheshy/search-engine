@@ -2,10 +2,10 @@ from collections import Counter
 from datetime import datetime
 import json
 import math
-from typing import Union, List
 
-from fastapi import FastAPI, Request, Header
+from fastapi import FastAPI, Request
 
+from api_constants import ApiUrlConstants
 from constants import ERROR_RESPONSE_DICT_FORMAT, CATEGORY_LEVEL_MAPPING, STORE_WH_MAP
 from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline, get_listing_pipeline_for_retail, \
     get_listing_pipeline_for_mall
@@ -488,7 +488,7 @@ def product_listing(request: Request):
     # return request_response
 
 
-@app.post("/v1/product-listing")
+@app.post(ApiUrlConstants.V1_PRODUCT_LISTING)
 async def product_listing_v1(request: Request):
     error_response_dict = ERROR_RESPONSE_DICT_FORMAT
     request_data = await request.json()
