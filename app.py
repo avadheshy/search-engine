@@ -579,13 +579,13 @@ async def product_listing_v1(request: Request):
         only_category_data = True
         filter_kwargs["brand_id"] = {"$in": typcasted_data.get("brandIds")}
         filter_kwargs_for_mall["brand_id"] = {"$in": typcasted_data.get("brandIds")}
-        filter_kwargs_for_brand_and_cat["brand_id"] = {"$in": typcasted_data.get("brandIds")}
+        # filter_kwargs_for_brand_and_cat["brand_id"] = {"$in": typcasted_data.get("brandIds")}
         brand_ids_input.extend(typcasted_data.get("brandIds"))
     if typcasted_data.get("categories"):
         only_brand_data = True
         filter_kwargs["category_id"] = {"$in": typcasted_data.get("categories")}
         filter_kwargs_for_mall["category_id"] = {"$in": typcasted_data.get("categories")}
-        filter_kwargs_for_brand_and_cat["category_id"] = {"$in": typcasted_data.get("categories")}
+        # filter_kwargs_for_brand_and_cat["category_id"] = {"$in": typcasted_data.get("categories")}
         category_ids_input.extend(typcasted_data.get("categories"))
     if typcasted_data.get("filters_for") == "brand":
         only_category_data = True
