@@ -1,5 +1,5 @@
 from constants import STORE_WH_MAP
-
+from settings import SHARDED_SEARCH_DB
 
 GROUP_ADDITIONAL_STAGE = [
  {'$project': {'id': '$product_id', 'inv_qty': 1, '_id': 0, 'group_id': 1}},
@@ -439,3 +439,58 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
         pipeline.insert(-3, {'$sort':sort_query})
 
     return pipeline
+
+
+def get_brand_and_category_ids_for_retail(filter_kwargs):
+    print("here :  : ")
+    print(filter_kwargs)
+    all_data = list(SHARDED_SEARCH_DB["product_store_sharded"].find(filter_kwargs, {"_id": 0, "brand_id": 1, "category_id": 1}))
+    print("here : Now")
+    brand_ids = list(set([str(data.get('brand_id'))for data in all_data if data.get('brand_id')]))
+    category_ids = list(set([str(data.get('category_id'))for data in all_data if data.get('category_id')]))
+    return brand_ids, category_ids
+
+
+def get_brand_and_category_ids_for_mall(filter_kwargs, warehouse_id):
+    all_data = list(SHARDED_SEARCH_DB["search_products"].aggregate(
+        [
+            {'$match': filter_kwargs},
+            {
+                '$lookup': {
+                    'from': 'product_warehouse_stocks',
+                    'localField': 'id',
+                    'foreignField': 'product_id',
+                    'as': 'data',
+                    'pipeline': [
+                        {
+                            '$match': {
+                                'warehouse_id': warehouse_id
+                            }
+                        }, {
+                            '$project': {
+                                "_id": 0,
+                                'warehouse_id': 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                '$match': {
+                    'data': {
+                        '$ne': []
+                    }
+                }
+            },
+            {
+                '$project': {
+                    "_id": 0,
+                    "brand_id": "$brand_id",
+                    "category_id": "$category_id"
+                }
+            }
+        ]
+    ))
+    brand_ids = list(set([str(data.get('brand_id'))for data in all_data if data.get('brand_id')]))
+    category_ids = list(set([str(data.get('category_id'))for data in all_data if data.get('category_id')]))
+    return brand_ids, category_ids

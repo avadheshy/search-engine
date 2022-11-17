@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from api_constants import ApiUrlConstants
 from constants import ERROR_RESPONSE_DICT_FORMAT, CATEGORY_LEVEL_MAPPING, STORE_WH_MAP
 from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline, get_listing_pipeline_for_retail, \
-    get_listing_pipeline_for_mall
+    get_listing_pipeline_for_mall, get_brand_and_category_ids_for_retail, get_brand_and_category_ids_for_mall
 from settings import SHARDED_SEARCH_DB
 from search_utils import SearchUtils
 
@@ -560,6 +560,12 @@ async def product_listing_v1(request: Request):
         is_mall="0",
         status="1"
     )
+    filter_kwargs_for_brand_and_cat = dict(
+        is_mall="1" if typcasted_data.get("type") == "mall" else "0",
+        status=1
+    )
+    if typcasted_data.get("type") == "retail":
+        filter_kwargs_for_brand_and_cat["store_id"] = typcasted_data["store_id"]
 
     warehouse_id = STORE_WH_MAP.get(typcasted_data.get("store_id"))
     filter_kwargs_for_mall = dict(
@@ -573,29 +579,35 @@ async def product_listing_v1(request: Request):
         only_category_data = True
         filter_kwargs["brand_id"] = {"$in": typcasted_data.get("brandIds")}
         filter_kwargs_for_mall["brand_id"] = {"$in": typcasted_data.get("brandIds")}
+        filter_kwargs_for_brand_and_cat["brand_id"] = {"$in": typcasted_data.get("brandIds")}
         brand_ids_input.extend(typcasted_data.get("brandIds"))
     if typcasted_data.get("categories"):
         only_brand_data = True
         filter_kwargs["category_id"] = {"$in": typcasted_data.get("categories")}
         filter_kwargs_for_mall["category_id"] = {"$in": typcasted_data.get("categories")}
+        filter_kwargs_for_brand_and_cat["category_id"] = {"$in": typcasted_data.get("categories")}
         category_ids_input.extend(typcasted_data.get("categories"))
     if typcasted_data.get("filters_for") == "brand":
         only_category_data = True
         filter_kwargs["brand_id"] = typcasted_data.get("filter_id")
+        filter_kwargs_for_brand_and_cat["brand_id"] = typcasted_data.get("filter_id")
         filter_kwargs_for_mall["brand_id"] = typcasted_data.get("filter_id")
         brand_ids_input.append(typcasted_data.get("filter_id"))
     elif typcasted_data.get("filters_for") == "category":
         only_brand_data = True
         filter_kwargs["category_id"] = typcasted_data.get("filter_id")
+        filter_kwargs_for_brand_and_cat["category_id"] = typcasted_data.get("filter_id")
         filter_kwargs_for_mall["category_id"] = typcasted_data.get("filter_id")
         category_ids_input.append(typcasted_data.get("filter_id"))
     elif typcasted_data.get("filters_for") == "group":
         both_brand_and_category_data = True
         filter_kwargs["group_id"] = typcasted_data.get("filter_id")
+        filter_kwargs_for_brand_and_cat["group_id"] = typcasted_data.get("filter_id")
         filter_kwargs_for_mall["group_id"] = typcasted_data.get("filter_id")
     elif typcasted_data.get("filters_for") == "tag":
         both_brand_and_category_data = True
         filter_kwargs["tag_ids"] = str(typcasted_data.get("filter_id"))
+        filter_kwargs_for_brand_and_cat["tag_ids"] = str(typcasted_data.get("filter_id"))
         filter_kwargs_for_mall["tag_ids"] = str(typcasted_data.get("filter_id"))
     elif typcasted_data.get("filters_for") in ("cl1", "cl2", "cl3", "cl4"):
         only_brand_data = True
@@ -603,37 +615,41 @@ async def product_listing_v1(request: Request):
         filter_kwargs["category_id"] = typcasted_data.get("filter_id")
         filter_kwargs_for_mall["cat_level"] = CATEGORY_LEVEL_MAPPING.get(typcasted_data.get("filters_for"))
         filter_kwargs_for_mall["category_id"] = typcasted_data.get("filter_id")
+        filter_kwargs_for_brand_and_cat["cat_level"] = CATEGORY_LEVEL_MAPPING.get(typcasted_data.get("filters_for"))
+        filter_kwargs_for_brand_and_cat["category_id"] = typcasted_data.get("filter_id")
         category_ids_input.append(typcasted_data.get("filter_id"))
 
+    brand_ids, category_ids = [], []
     if typcasted_data.get("type") == "retail":
         pipeline = get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit)
-        # print(pipeline)
         data = list(SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipeline))
+        brand_ids, category_ids = get_brand_and_category_ids_for_retail(filter_kwargs_for_brand_and_cat)
     elif typcasted_data.get("type") == "mall":
         pipeline = get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, offset, limit)
-        # print(pipeline)
         data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
+        brand_ids, category_ids = get_brand_and_category_ids_for_mall(filter_kwargs_for_brand_and_cat, warehouse_id)
+    # print("b : ", brand_ids, "c : ", category_ids)
     data_to_return = data[0].get("data")
     num_found = data[0].get("numFound") or 0
-    data_for_brand_and_cat_ids = data_to_return
 
-    """Making query duplicate here for brand and category data"""
-    if typcasted_data.get("brandIds") or typcasted_data.get("categories"):
-        filter_kwargs.pop("brand_id", None)
-        filter_kwargs.pop("category_id", None)
-        filter_kwargs_for_mall.pop("brand_id", None)
-        filter_kwargs_for_mall.pop("category_id", None)
-        if typcasted_data.get("type") == "retail":
-            pipeline = get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit)
-            new_data = list(SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipeline))
-        elif typcasted_data.get("type") == "mall":
-            pipeline = get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, None, None)
-            new_data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
-        data_for_brand_and_category = new_data[0].get("data")
-        data_for_brand_and_cat_ids = data_for_brand_and_category
+    # """Making query duplicate here for brand and category data"""
+    # if typcasted_data.get("brandIds") or typcasted_data.get("categories"):
+    #     filter_kwargs.pop("brand_id", None)
+    #     filter_kwargs.pop("category_id", None)
+    #     filter_kwargs_for_mall.pop("brand_id", None)
+    #     filter_kwargs_for_mall.pop("category_id", None)
+    #     if typcasted_data.get("type") == "retail":
+    #         pipeline = get_listing_pipeline_for_retail(filter_kwargs, None, None, None)
+    #         new_data = list(SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipeline))
+    #     elif typcasted_data.get("type") == "mall":
+    #         pipeline = get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, None, None)
+    #         new_data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
+    #     data_for_brand_and_category = new_data[0].get("data")
+    #     brand_ids = list(
+    #         set([str(product.get('brand_id')) for product in data_for_brand_and_category if product.get('brand_id')]))
+    #     category_ids = list(set([str(product.get('category_id')) for product in data_for_brand_and_category if
+    #                              product.get('category_id')]))
 
-    brand_ids = list(([str(product.get('brand_id')) for product in data_for_brand_and_cat_ids if product.get('brand_id')]))
-    category_ids = list(([str(product.get('category_id')) for product in data_for_brand_and_cat_ids if product.get('category_id')]))
     dict_brand_ids = Counter(brand_ids)
     dict_category_ids = Counter(category_ids)
     brand_filter = {
