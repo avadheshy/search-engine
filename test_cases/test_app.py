@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app import app
+from api_constants import ApiUrlConstants
 
 client = TestClient(app)
 
@@ -13,7 +14,7 @@ def test_read_main():
 
 def test_product_listing_v1_for_mall():
     response = client.post(
-        url="/v1/product-listing",
+        url=ApiUrlConstants.V1_PRODUCT_LISTING,
         json={
             "store_id": "64",
             "page": "1",
@@ -48,7 +49,7 @@ def test_product_listing_v1_for_mall():
 
 def test_product_listing_v1_for_mall_and_source_android_app():
     response = client.post(
-        url="/v1/product-listing",
+        url=ApiUrlConstants.V1_PRODUCT_LISTING,
         json={
             "store_id": "64",
             "page": "1",
