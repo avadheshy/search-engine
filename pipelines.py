@@ -296,6 +296,17 @@ def group_autocomplete_stage(
 
 
 def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
+    if offset is not None and limit is not None:
+        data_array = [
+            {
+                '$skip': offset
+            },
+            {
+                '$limit': limit
+            }
+        ]
+    else:
+        data_array = []
     pipeline = [
         {
             "$match": filter_kwargs
@@ -328,14 +339,7 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
                         '$count': 'count'
                     }
                 ],
-                'data': [
-                    {
-                        '$skip': offset
-                    },
-                    {
-                        '$limit': limit
-                    }
-                ]
+                'data': data_array
             }
         },
         {
@@ -351,6 +355,17 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
 
 
 def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, offset, limit):
+    if offset is not None and limit is not None:
+        data_array = [
+            {
+                '$skip': offset
+            },
+            {
+                '$limit': limit
+            }
+        ]
+    else:
+        data_array = []
     pipeline = [
         {'$match': filter_kwargs_for_mall},
         {
@@ -410,14 +425,7 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
                         '$count': 'count'
                     }
                 ],
-                'data': [
-                    {
-                        '$skip': offset
-                    },
-                    {
-                        '$limit': limit
-                    }
-                ]
+                'data': data_array
             }
         },
         {
