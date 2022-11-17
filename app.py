@@ -614,10 +614,26 @@ async def product_listing_v1(request: Request):
         # print(pipeline)
         data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
     data_to_return = data[0].get("data")
-    # print(data_to_return)
     num_found = data[0].get("numFound") or 0
-    brand_ids = list(([str(product.get('brand_id')) for product in data_to_return if product.get('brand_id')]))
-    category_ids = list(([str(product.get('category_id')) for product in data_to_return if product.get('category_id')]))
+    data_for_brand_and_cat_ids = data_to_return
+
+    """Making query duplicate here for brand and category data"""
+    if typcasted_data.get("brandIds") or typcasted_data.get("categories"):
+        filter_kwargs.pop("brand_id", None)
+        filter_kwargs.pop("category_id", None)
+        filter_kwargs_for_mall.pop("brand_id", None)
+        filter_kwargs_for_mall.pop("category_id", None)
+        if typcasted_data.get("type") == "retail":
+            pipeline = get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit)
+            new_data = list(SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipeline))
+        elif typcasted_data.get("type") == "mall":
+            pipeline = get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, None, None)
+            new_data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
+        data_for_brand_and_category = new_data[0].get("data")
+        data_for_brand_and_cat_ids = data_for_brand_and_category
+
+    brand_ids = list(([str(product.get('brand_id')) for product in data_for_brand_and_cat_ids if product.get('brand_id')]))
+    category_ids = list(([str(product.get('category_id')) for product in data_for_brand_and_cat_ids if product.get('category_id')]))
     dict_brand_ids = Counter(brand_ids)
     dict_category_ids = Counter(category_ids)
     brand_filter = {
