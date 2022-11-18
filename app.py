@@ -545,9 +545,9 @@ async def product_listing_v1(request: Request):
         if sort_by == 'new':
             sort_query['created_at'] = 1
         elif sort_by == 'min_price':
-            sort_query['price'] = 1
+            sort_query['mrp'] = 1
         elif sort_by == 'max_price':
-            sort_query['price'] = -1
+            sort_query['mrp'] = -1
         elif sort_by == 'relevance':
             sort_query['updated_at'] = 1
         # elif sort_by=='popular':
