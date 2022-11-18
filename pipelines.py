@@ -135,7 +135,7 @@ def get_boosting_stage(
                 }
             },
             {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"}}},
-            {"$sort": {"stock": -1}},
+            # {"$sort": {"stock": -1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
@@ -170,7 +170,7 @@ def get_boosting_stage(
             },
             {"$match": {"store.store_id": store_id}},
             {"$project": {"_id": 0, "id": 1, "inv_qty": {"$first": "$store.inv_qty"}}},
-            {"$sort": {"inv_qty": -1}},
+            # {"$sort": {"inv_qty": -1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
@@ -240,7 +240,7 @@ def get_pipeline_from_sharded_collection(
         PIPELINE = SEARCH_PIPE + [
             {"$match": match_filter},
             {"$project": {"id": "$product_id", "inv_qty": 1, "_id": 0}},
-            {"$sort": {"inv_qty": -1}},
+            # {"$sort": {"inv_qty": -1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
@@ -266,7 +266,7 @@ def get_pipeline_from_sharded_collection(
                 }
             },
             {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"}}},
-            {"$sort": {"stock": -1}},
+            # {"$sort": {"stock": -1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
