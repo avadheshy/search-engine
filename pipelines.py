@@ -1,5 +1,5 @@
 from constants import STORE_WH_MAP
-from settings import SHARDED_SEARCH_DB
+from settings import SHARDED_SEARCH_DB, ASYNC_SHARDED_SEARCH_DB
 
 GROUP_ADDITIONAL_STAGE = [
  {'$project': {'id': '$product_id', 'inv_qty': 1, '_id': 0, 'group_id': 1}},
@@ -377,7 +377,8 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
                 'pipeline': [
                     {
                         '$match': {
-                            'warehouse_id': warehouse_id
+                            'warehouse_id': warehouse_id,
+                            'stock': {"$gt": 0}
                         }
                     }, {
                         '$project': {
@@ -448,46 +449,87 @@ def get_brand_and_category_ids_for_retail(filter_kwargs):
     return brand_ids, category_ids
 
 
-def get_brand_and_category_ids_for_mall(filter_kwargs, warehouse_id):
-    all_data = list(SHARDED_SEARCH_DB["search_products"].aggregate(
-        [
-            {'$match': filter_kwargs},
-            {
-                '$lookup': {
-                    'from': 'product_warehouse_stocks',
-                    'localField': 'id',
-                    'foreignField': 'product_id',
-                    'as': 'data',
-                    'pipeline': [
-                        {
-                            '$match': {
-                                'warehouse_id': warehouse_id
-                            }
-                        }, {
-                            '$project': {
-                                "_id": 0,
-                                'warehouse_id': 1
-                            }
+def get_brand_and_category_pipeline_for_mall(filter_kwargs, warehouse_id):
+    pipeline = [
+        {'$match': filter_kwargs},
+        {
+            '$lookup': {
+                'from': 'product_warehouse_stocks',
+                'localField': 'id',
+                'foreignField': 'product_id',
+                'as': 'data',
+                'pipeline': [
+                    {
+                        '$match': {
+                            'warehouse_id': warehouse_id
                         }
-                    ]
-                }
-            },
-            {
-                '$match': {
-                    'data': {
-                        '$ne': []
+                    }, {
+                        '$project': {
+                            "_id": 0,
+                            'warehouse_id': 1
+                        }
                     }
-                }
-            },
-            {
-                '$project': {
-                    "_id": 0,
-                    "brand_id": "$brand_id",
-                    "category_id": "$category_id"
+                ]
+            }
+        },
+        {
+            '$match': {
+                'data': {
+                    '$ne': []
                 }
             }
-        ]
-    ))
-    brand_ids = list(set([str(data.get('brand_id'))for data in all_data if data.get('brand_id')]))
-    category_ids = list(set([str(data.get('category_id'))for data in all_data if data.get('category_id')]))
+        },
+        {
+            '$project': {
+                "_id": 0,
+                "brand_id": "$brand_id",
+                "category_id": "$category_id"
+            }
+        }
+    ]
+    return pipeline
+
+
+def get_brand_and_category_ids_for_mall(brand_category_data):
+    # brand_category_data = SHARDED_SEARCH_DB["search_products"].aggregate(
+    #     [
+    #         {'$match': filter_kwargs},
+    #         {
+    #             '$lookup': {
+    #                 'from': 'product_warehouse_stocks',
+    #                 'localField': 'id',
+    #                 'foreignField': 'product_id',
+    #                 'as': 'data',
+    #                 'pipeline': [
+    #                     {
+    #                         '$match': {
+    #                             'warehouse_id': warehouse_id
+    #                         }
+    #                     }, {
+    #                         '$project': {
+    #                             "_id": 0,
+    #                             'warehouse_id': 1
+    #                         }
+    #                     }
+    #                 ]
+    #             }
+    #         },
+    #         {
+    #             '$match': {
+    #                 'data': {
+    #                     '$ne': []
+    #                 }
+    #             }
+    #         },
+    #         {
+    #             '$project': {
+    #                 "_id": 0,
+    #                 "brand_id": "$brand_id",
+    #                 "category_id": "$category_id"
+    #             }
+    #         }
+    #     ]
+    # )
+    brand_ids = list(set([str(data.get('brand_id')) for data in brand_category_data if data.get('brand_id')]))
+    category_ids = list(set([str(data.get('category_id')) for data in brand_category_data if data.get('category_id')]))
     return brand_ids, category_ids

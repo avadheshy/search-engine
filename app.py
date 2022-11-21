@@ -1,3 +1,4 @@
+import asyncio
 from collections import Counter
 from datetime import datetime
 import json
@@ -8,8 +9,9 @@ from fastapi import FastAPI, Request
 from api_constants import ApiUrlConstants
 from constants import ERROR_RESPONSE_DICT_FORMAT, CATEGORY_LEVEL_MAPPING, STORE_WH_MAP
 from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline, get_listing_pipeline_for_retail, \
-    get_listing_pipeline_for_mall, get_brand_and_category_ids_for_retail, get_brand_and_category_ids_for_mall
-from settings import SHARDED_SEARCH_DB
+    get_listing_pipeline_for_mall, get_brand_and_category_ids_for_retail, get_brand_and_category_ids_for_mall, \
+    get_brand_and_category_pipeline_for_mall
+from settings import SHARDED_SEARCH_DB, loop, ASYNC_SHARDED_SEARCH_DB
 from search_utils import SearchUtils
 
 app = FastAPI()
@@ -558,7 +560,8 @@ async def product_listing_v1(request: Request):
     filter_kwargs = dict(
         store_id=typcasted_data["store_id"],
         is_mall="0",
-        status="1"
+        status="1",
+        inv_qty={"$gt": 0}
     )
     filter_kwargs_for_brand_and_cat = dict(
         is_mall="1" if typcasted_data.get("type") == "mall" else "0",
@@ -626,29 +629,23 @@ async def product_listing_v1(request: Request):
         brand_ids, category_ids = get_brand_and_category_ids_for_retail(filter_kwargs_for_brand_and_cat)
     elif typcasted_data.get("type") == "mall":
         pipeline = get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, offset, limit)
+        brand_category_pipeline = get_brand_and_category_pipeline_for_mall(filter_kwargs_for_brand_and_cat,
+                                                                           warehouse_id)
+        # TODO code of parallel DB calls
+        # combined_data = loop.run_until_complete(
+        #     asyncio.gather(*[
+        #         ASYNC_SHARDED_SEARCH_DB["search_products"].aggregate(pipeline).to_list(None),
+        #         ASYNC_SHARDED_SEARCH_DB["search_products"].aggregate(brand_category_pipeline).to_list(None),
+        #     ]))
+            # parallel_db_calls_for_mall_listing_api(pipeline, filter_kwargs_for_brand_and_cat, warehouse_id))
+        # data = list(combined_data[0])
+        # brand_category_data = list(combined_data[1])
         data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
-        brand_ids, category_ids = get_brand_and_category_ids_for_mall(filter_kwargs_for_brand_and_cat, warehouse_id)
-    # print("b : ", brand_ids, "c : ", category_ids)
+        brand_category_data = list(SHARDED_SEARCH_DB["search_products"].aggregate(brand_category_pipeline))
+        brand_ids, category_ids = get_brand_and_category_ids_for_mall(brand_category_data)
+
     data_to_return = data[0].get("data")
     num_found = data[0].get("numFound") or 0
-
-    # """Making query duplicate here for brand and category data"""
-    # if typcasted_data.get("brandIds") or typcasted_data.get("categories"):
-    #     filter_kwargs.pop("brand_id", None)
-    #     filter_kwargs.pop("category_id", None)
-    #     filter_kwargs_for_mall.pop("brand_id", None)
-    #     filter_kwargs_for_mall.pop("category_id", None)
-    #     if typcasted_data.get("type") == "retail":
-    #         pipeline = get_listing_pipeline_for_retail(filter_kwargs, None, None, None)
-    #         new_data = list(SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipeline))
-    #     elif typcasted_data.get("type") == "mall":
-    #         pipeline = get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, None, None)
-    #         new_data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
-    #     data_for_brand_and_category = new_data[0].get("data")
-    #     brand_ids = list(
-    #         set([str(product.get('brand_id')) for product in data_for_brand_and_category if product.get('brand_id')]))
-    #     category_ids = list(set([str(product.get('category_id')) for product in data_for_brand_and_category if
-    #                              product.get('category_id')]))
 
     dict_brand_ids = Counter(brand_ids)
     dict_category_ids = Counter(category_ids)
