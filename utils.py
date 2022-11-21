@@ -179,4 +179,4 @@ PIPE1 = [
     }
 ]
 
-# conn = mysql.connector.connect(user='nagendra.kumar', password='EB91c7lNtPRdG5uD', host='127.0.0.1', database='pos',port='3306')
+# connection = mysql.connector.connect(user='nagendra.kumar', password='EB91c7lNtPRdG5uD', host='127.0.0.1', database='pos',port='3310')

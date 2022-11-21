@@ -369,6 +369,56 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
     pipeline = [
         {'$match': filter_kwargs_for_mall},
         {
+            '$group': {
+                '_id': '$group_id',
+                'id': {
+                    '$first': '$id'
+                },
+                'mrp': {
+                    '$first': '$mrp'
+                },
+                'price': {
+                    '$first': '$price'
+                },
+                'updated_at': {
+                    '$first': '$updated_at'
+                },
+                'brand_id': {
+                    '$first': '$brand_id'
+                },
+                'category_id': {
+                    '$first': '$category_id'
+                },
+                'created_at': {
+                    '$first': '$created_at'
+                },
+                'cat_level': {
+                    '$first': '$cat_level'
+                },
+                'tag_ids': {
+                    '$first': '$tag_ids'
+                },
+                'ps': {
+                    '$first': '$ps'
+                }
+            }
+        },
+        # {
+        #     '$project': {
+        #         'group_id': '$_id',
+        #         'id': 1,
+        #         'mrp': 1,
+        #         'price': 1,
+        #         'updated_at': 1,
+        #         'brand_id': 1,
+        #         'category_id': 1,
+        #         'created_at': 1,
+        #         'cat_level': 1,
+        #         'tag_ids': 1,
+        #         'ps': 1
+        #     }
+        # },
+        {
             '$lookup': {
                 'from': 'product_warehouse_stocks',
                 'localField': 'id',
@@ -412,7 +462,7 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
                     }
                 },
                 'group_id': {
-                    "$toInt": "$group_id"
+                    "$toInt": "$_id"
                 },
                 "brand_id": "$brand_id",
                 "category_id": "$category_id",

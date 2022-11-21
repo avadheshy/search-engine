@@ -35,7 +35,7 @@ def sync_product_tag():
     for res in result1:
         d = {}
         for i in range(len(keys)):
-            d[keys[i]] = str(res[i]) if res[i] else None
+            d[keys[i]] = str(res[i]) if res.get(i) else None
         data.append(d)
 
     payload = []
