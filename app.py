@@ -555,7 +555,8 @@ async def product_listing_v1(request: Request):
     elif sort_by == 'popular':
         sort_query['ps'] = -1
     else:
-        sort_query['updated_at'] = 1
+        pass
+    sort_query.update(updated_at=-1)
 
     filter_kwargs = dict(
         store_id=typcasted_data["store_id"],

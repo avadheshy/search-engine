@@ -487,8 +487,7 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
         }
     ]
     if sort_query:
-        pipeline.insert(-3, {'$sort':sort_query})
-
+        pipeline.insert(-3, {'$sort': sort_query})
     return pipeline
 
 
