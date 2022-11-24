@@ -368,11 +368,6 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
         data_array = []
     pipeline = [
         {'$match': filter_kwargs_for_mall},
-        # {
-        #     "$sort": {
-        #         "id": 1
-        #     }
-        # },
         {
             '$group': {
                 '_id': '$group_id',
@@ -408,21 +403,7 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
                 }
             }
         },
-        # {
-        #     '$project': {
-        #         'group_id': '$_id',
-        #         'id': 1,
-        #         'mrp': 1,
-        #         'price': 1,
-        #         'updated_at': 1,
-        #         'brand_id': 1,
-        #         'category_id': 1,
-        #         'created_at': 1,
-        #         'cat_level': 1,
-        #         'tag_ids': 1,
-        #         'ps': 1
-        #     }
-        # },
+
         {
             '$lookup': {
                 'from': 'product_warehouse_stocks',

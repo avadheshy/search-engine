@@ -5,7 +5,7 @@ from pymongo import MongoClient, UpdateOne, UpdateMany
 CLIENT = MongoClient(
     "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
 )
-DB = CLIENT.search
+DB = CLIENT.product_search
 
 
 def sync_all_categories():
@@ -120,6 +120,6 @@ def score_sync():
         }
         payload.append({'id': product.get('product_id')},{"$set": {"ps": n_abc}})
 
-    if payload:
-        DB['search_products'].bulk_write(payload)
+    # if payload:
+    #     DB['search_products'].bulk_write(payload)
     return True, "Syncing was successfull."

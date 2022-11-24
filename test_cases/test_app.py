@@ -4,7 +4,7 @@ from app import app
 from api_constants import ApiUrlConstants
 
 client = TestClient(app)
-dummy_response = {
+expected_response_without_x_source = {
     "count": int,
     "rows": int,
     "currentPage": int,
@@ -14,7 +14,7 @@ dummy_response = {
     "groupIds": list,
     "filters": list
 }
-dummy_response1 = {
+expected_response_with_x_source = {
     "count": int,
     "rows": int,
     "currentPage": int,
@@ -24,7 +24,7 @@ dummy_response1 = {
     "groupIds": list,
     "filters": dict
 }
-dummy_response2 = {
+expected_response_for_group = {
     "total": int,
     "data": list,
 }
@@ -56,9 +56,9 @@ def test_product_listing_v1_for_mall():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response1.keys()
+    assert response_data.keys() == expected_response_with_x_source.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response1.get(key)
+        assert type(value) == expected_response_with_x_source.get(key)
 
 
 def test_product_listing_v1_for_mall_tag():
@@ -78,9 +78,9 @@ def test_product_listing_v1_for_mall_tag():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response.keys()
+    assert response_data.keys() == expected_response_without_x_source.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response.get(key)
+        assert type(value) == expected_response_without_x_source.get(key)
 
 
 def test_product_listing_v1_for_mall_x_source():
@@ -100,9 +100,9 @@ def test_product_listing_v1_for_mall_x_source():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response.keys()
+    assert response_data.keys() == expected_response_without_x_source.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response.get(key)
+        assert type(value) == expected_response_without_x_source.get(key)
 
 
 def test_product_listing_v1_for_mall_cl1():
@@ -122,9 +122,9 @@ def test_product_listing_v1_for_mall_cl1():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response.keys()
+    assert response_data.keys() == expected_response_without_x_source.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response.get(key)
+        assert type(value) == expected_response_without_x_source.get(key)
 
 
 def test_product_listing_v1_for_mall_cl2():
@@ -144,9 +144,9 @@ def test_product_listing_v1_for_mall_cl2():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response.keys()
+    assert response_data.keys() == expected_response_without_x_source.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response.get(key)
+        assert type(value) == expected_response_without_x_source.get(key)
 
 
 def test_product_listing_v1_for_mall_cl3():
@@ -166,9 +166,9 @@ def test_product_listing_v1_for_mall_cl3():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response.keys()
+    assert response_data.keys() == expected_response_without_x_source.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response.get(key)
+        assert type(value) == expected_response_without_x_source.get(key)
 
 
 def test_product_listing_v1_for_mall_cl4():
@@ -187,9 +187,9 @@ def test_product_listing_v1_for_mall_cl4():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response.keys()
+    assert response_data.keys() == expected_response_without_x_source.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response.get(key)
+        assert type(value) == expected_response_without_x_source.get(key)
 
 
 def test_product_listing_v1_for_mall_category():
@@ -209,9 +209,9 @@ def test_product_listing_v1_for_mall_category():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response.keys()
+    assert response_data.keys() == expected_response_without_x_source.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response.get(key)
+        assert type(value) == expected_response_without_x_source.get(key)
 
 
 def test_product_listing_v1_for_mall_brand():
@@ -231,9 +231,9 @@ def test_product_listing_v1_for_mall_brand():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response.keys()
+    assert response_data.keys() == expected_response_without_x_source.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response.get(key)
+        assert type(value) == expected_response_without_x_source.get(key)
 
 
 def test_product_listing_v1_for_mall_group():
@@ -253,9 +253,9 @@ def test_product_listing_v1_for_mall_group():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response.keys()
+    assert response_data.keys() == expected_response_without_x_source.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response.get(key)
+        assert type(value) == expected_response_without_x_source.get(key)
 
 
 def test_product_listing_v1_for_mall_and_source_android_app():
@@ -278,9 +278,9 @@ def test_product_listing_v1_for_mall_and_source_android_app():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response.keys()
+    assert response_data.keys() == expected_response_without_x_source.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response.get(key)
+        assert type(value) == expected_response_without_x_source.get(key)
 
 
 def test_product_search_v2_0():
@@ -299,9 +299,9 @@ def test_product_search_v2_0():
     response_data = response.json()
 
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response2.keys()
+    assert response_data.keys() == expected_response_for_group.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response2.get(key)
+        assert type(value) == expected_response_for_group.get(key)
     assert len(response_data.get('data')) <= 10
 
 
@@ -320,9 +320,9 @@ def test_product_search_v2_1():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response2.keys()
+    assert response_data.keys() == expected_response_for_group.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response2.get(key)
+        assert type(value) == expected_response_for_group.get(key)
     assert len(response_data.get('data')) <= 15
 
 
@@ -340,9 +340,9 @@ def test_product_search_v1_retail():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response2.keys()
+    assert response_data.keys() == expected_response_for_group.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response2.get(key)
+        assert type(value) == expected_response_for_group.get(key)
 
 
 def test_product_search_v1_retail_1():
@@ -359,9 +359,9 @@ def test_product_search_v1_retail_1():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response2.keys()
+    assert response_data.keys() == expected_response_for_group.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response2.get(key)
+        assert type(value) == expected_response_for_group.get(key)
 
 
 def test_product_search_v1_mall():
@@ -378,13 +378,13 @@ def test_product_search_v1_mall():
 
     response_data = response.json()
     assert response.status_code == 200
-    assert response_data.keys() == dummy_response2.keys()
+    assert response_data.keys() == expected_response_for_group.keys()
     for key, value in response_data.items():
-        assert type(value) == dummy_response2.get(key)
+        assert type(value) == expected_response_for_group.get(key)
 
 
 def test_store_map():
-    response = client.get(url=ApiUrlConstants.store_map)
+    response = client.get(url=ApiUrlConstants.STORE_MAP)
     response_data = response.json()
 
     assert response.status_code == 200
