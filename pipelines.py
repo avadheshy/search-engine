@@ -510,7 +510,8 @@ def get_brand_and_category_pipeline_for_mall(filter_kwargs, warehouse_id):
                 'pipeline': [
                     {
                         '$match': {
-                            'warehouse_id': warehouse_id
+                            'warehouse_id': warehouse_id,
+                            'stock': {"$gt": 0}
                         }
                     }, {
                         '$project': {
