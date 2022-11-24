@@ -5,7 +5,7 @@ from pymongo import MongoClient, UpdateOne, UpdateMany
 CLIENT = MongoClient(
     "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
 )
-DB = CLIENT.product_search
+DB = CLIENT.search
 
 
 def sync_all_categories():
@@ -109,42 +109,17 @@ def score_sync():
     data = []
     for res in result:
         data.append({'product_id': res[0]})
-    ##
-    data = [
-        {
-            'product_id': 17
-        },
-        {
-            'product_id': 18
-        }
-    ]
+
 
     payload = []
     for product in data:
-        payload.append(UpdateOne({'product_id': product.get('product_id')},
-                                 {
-                                     "$cond": {
-                                         "if": {
-                                             "$gt": [
-                                                 "$ps",
-                                                 0
-                                             ]
-                                         },
-                                         "then": {
-                                             "$set": {
-                                                 '$inc': {'ps': 1}
-                                             }
+        n_abc = {
+          "$sum": [
+              "$ps", 1
+          ]
+        }
+        payload.append({'id': product.get('product_id')},{"$set": {"ps": n_abc}})
 
-                                         },
-                                         "else": {
-                                             "$set": {
-                                                 "ps": 1
-                                             }
-                                         }
-                                     }
-                                 }
-                                 ))
-    #
-    # if payload:
-    #     DB["brands"].bulk_write(payload)
+    if payload:
+        DB['search_products'].bulk_write(payload)
     return True, "Syncing was successfull."

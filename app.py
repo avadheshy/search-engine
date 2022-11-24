@@ -629,6 +629,7 @@ async def product_listing_v1(request: Request):
         brand_ids, category_ids = get_brand_and_category_ids_for_retail(filter_kwargs_for_brand_and_cat)
     elif typcasted_data.get("type") == "mall":
         pipeline = get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_query, offset, limit)
+        print(pipeline)
         brand_category_pipeline = get_brand_and_category_pipeline_for_mall(filter_kwargs_for_brand_and_cat,
                                                                            warehouse_id)
         # TODO code of parallel DB calls

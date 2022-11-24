@@ -368,6 +368,11 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
         data_array = []
     pipeline = [
         {'$match': filter_kwargs_for_mall},
+        # {
+        #     "$sort": {
+        #         "id": 1
+        #     }
+        # },
         {
             '$group': {
                 '_id': '$group_id',
