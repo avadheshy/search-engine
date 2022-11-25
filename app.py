@@ -213,15 +213,17 @@ async def product_listing_v1(request: Request):
         sort_query['created_at'] = 1
     elif sort_by == 'min_price':
         sort_query['price'] = 1
+        sort_query['updated_at'] = -1
     elif sort_by == 'max_price':
         sort_query['price'] = -1
+        sort_query['updated_at'] = -1
     elif sort_by == 'relevance':
         sort_query['updated_at'] = 1
     elif sort_by == 'popular':
         sort_query['ps'] = -1
+        sort_query['updated_at'] = -1
     else:
-        pass
-    sort_query.update(updated_at=-1)
+        sort_query['updated_at'] = -1
 
     filter_kwargs = dict(
         store_id=typcasted_data["store_id"],
