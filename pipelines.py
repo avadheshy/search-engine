@@ -2,27 +2,41 @@ from constants import STORE_WH_MAP
 from settings import SHARDED_SEARCH_DB, ASYNC_SHARDED_SEARCH_DB
 
 GROUP_ADDITIONAL_STAGE = [
- {'$project': {'id': '$product_id', 'inv_qty': 1, '_id': 0, 'group_id': 1}},
- {'$sort': {'inv_qty': -1}},
- {
-        '$group': {
-            '_id': '$group_id', 
-            'count': {
-                '$sum': 1
-            }
+    {
+        '$project': {
+            '_id': 0, 'group_id': 1,
+            # 'stock': {"$first": "$data.stock"}
         }
-    }, {
+    },
+    # {'$sort': {'inv_qty': -1}},
+    {
+        '$group': {
+            '_id': '$group_id',
+            # 'count': {
+            #     '$sum': "$stock"
+            # }
+        }
+    },
+    {
         '$match': {
             '_id': {
                 '$ne': None
             }
         }
-    }, {
+    },
+    {
         '$project': {
-            'id': '$_id', 
-            '_id': 0
+            'id': '$_id',
+            '_id': 0,
+            # "count": 1
         }
-    }]
+    },
+    # {
+    #     "$sort": {
+    #         "count": -1
+    #     }
+    # }
+]
 
 def listing_pipeline(skip, limit, match_filter):
     return [
@@ -129,7 +143,7 @@ def get_boosting_stage(
                     "foreignField": "product_id",
                     "as": "data",
                     "pipeline": [
-                        {"$match": {"warehouse_id": wh_id}},
+                        {"$match": {"warehouse_id": wh_id, 'stock': {"$gt": 0}}},
                         {"$project": {"warehouse_id": 1, "stock": 1}},
                     ],
                 }
@@ -260,7 +274,7 @@ def get_pipeline_from_sharded_collection(
                     "foreignField": "product_id",
                     "as": "data",
                     "pipeline": [
-                        {"$match": {"warehouse_id": wh_id}},
+                        {"$match": {"warehouse_id": wh_id, 'stock': {"$gt": 0}}},
                         {"$project": {"warehouse_id": 1, "stock": 1}},
                     ],
                 }
@@ -290,7 +304,7 @@ def group_autocomplete_stage(
     keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
 ):
     PIPELINE = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
-    NEW_GROUP_PIPELINE = PIPELINE[:-3] + GROUP_ADDITIONAL_STAGE + [PIPELINE[-1]]
+    NEW_GROUP_PIPELINE = PIPELINE[:-2] + GROUP_ADDITIONAL_STAGE + [PIPELINE[-1]]
     # print(NEW_GROUP_PIPELINE)
     return NEW_GROUP_PIPELINE
 
