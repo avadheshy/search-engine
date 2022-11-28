@@ -473,12 +473,12 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
         }
     ]
     if sort_query:
-        pipeline.insert(-3, {'$sort':sort_query})
-
+        pipeline.insert(-3, {'$sort': sort_query})
     return pipeline
 
 
 def get_brand_and_category_ids_for_retail(filter_kwargs):
+    filter_kwargs.update(inv_qty={"$gt": 0})
     all_data = list(SHARDED_SEARCH_DB["product_store_sharded"].find(filter_kwargs, {"_id": 0, "brand_id": 1, "category_id": 1}))
     brand_ids = list(set([str(data.get('brand_id'))for data in all_data if data.get('brand_id')]))
     category_ids = list(set([str(data.get('category_id'))for data in all_data if data.get('category_id')]))
@@ -497,7 +497,8 @@ def get_brand_and_category_pipeline_for_mall(filter_kwargs, warehouse_id):
                 'pipeline': [
                     {
                         '$match': {
-                            'warehouse_id': warehouse_id
+                            'warehouse_id': warehouse_id,
+                            'stock': {"$gt": 0}
                         }
                     }, {
                         '$project': {

@@ -1,4 +1,4 @@
-from constants import S3_BRAND_URL
+from constants import S3_BRAND_URL, S3_CATEGORY_URL
 
 
 class SearchUtils:
@@ -27,7 +27,7 @@ class SearchUtils:
         if category_data:
             category_data_to_return = []
             for data in category_data:
-                logo_icon = f"category_url/{data.get('id')}/{data.get('icon')}" if data.get('icon') else None
+                logo_icon = f"{S3_CATEGORY_URL}{data.get('id')}/{data.get('icon')}" if data.get('icon') else None
                 category_data_to_return.append(dict(
                     id=data.get('id'),
                     name=data.get('name'),
@@ -41,7 +41,6 @@ class SearchUtils:
     @classmethod
     def make_brand_data(cls, brand_data, dict_brand_id, brand_ids_input):
         brand_data_to_return = None
-        print(brand_ids_input)
         if brand_data:
             brand_data_to_return = []
             for data in brand_data:
