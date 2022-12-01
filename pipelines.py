@@ -5,7 +5,7 @@ GROUP_ADDITIONAL_STAGE = [
     {
         '$project': {
             '_id': 0, 'group_id': 1,
-            # 'stock': {"$first": "$data.stock"}
+            'stock': {"$first": "$data.stock"}
         }
     },
     # {'$sort': {'inv_qty': -1}},
@@ -149,7 +149,7 @@ def get_boosting_stage(
                 }
             },
             {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"}}},
-            # {"$sort": {"stock": -1}},
+            {"$sort": {"stock": -1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
@@ -164,7 +164,7 @@ def get_boosting_stage(
             {"$match": match_filter},
             {
                 "$lookup": {
-                    "from": "product_store",
+                    "from": "product_store_sharded",
                     "let": {"product_id": "$id"},
                     "pipeline": [
                         {
@@ -182,9 +182,9 @@ def get_boosting_stage(
                     "as": "store",
                 }
             },
-            {"$match": {"store.store_id": store_id}},
+            {"$match": {"store.store_id": store_id,'store.inv_qty':{'$gt':0}}},
             {"$project": {"_id": 0, "id": 1, "inv_qty": {"$first": "$store.inv_qty"}}},
-            # {"$sort": {"inv_qty": -1}},
+            {"$sort": {"inv_qty": -1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
@@ -242,6 +242,8 @@ def get_pipeline_from_sharded_collection(
     is_mall = "0"
     if order_type == "mall":
         is_mall = "1"
+    else:
+        match_filter['inv_qty']={'$gt':0}
     match_filter["is_mall"] = is_mall
 
     if platform == "app":
@@ -254,7 +256,7 @@ def get_pipeline_from_sharded_collection(
         PIPELINE = SEARCH_PIPE + [
             {"$match": match_filter},
             {"$project": {"id": "$product_id", "inv_qty": 1, "_id": 0}},
-            # {"$sort": {"inv_qty": -1}},
+            {"$sort": {"inv_qty": -1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
@@ -280,7 +282,7 @@ def get_pipeline_from_sharded_collection(
                 }
             },
             {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"}}},
-            # {"$sort": {"stock": -1}},
+            {"$sort": {"stock": -1}},
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
@@ -304,7 +306,8 @@ def group_autocomplete_stage(
     keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
 ):
     PIPELINE = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
-    NEW_GROUP_PIPELINE = PIPELINE[:-2] + GROUP_ADDITIONAL_STAGE + [PIPELINE[-1]]
+    print(PIPELINE)
+    NEW_GROUP_PIPELINE = PIPELINE[:-3] + GROUP_ADDITIONAL_STAGE + [PIPELINE[-1]]
     # print(NEW_GROUP_PIPELINE)
     return NEW_GROUP_PIPELINE
 
