@@ -10,8 +10,8 @@ from api_constants import ApiUrlConstants
 from constants import ERROR_RESPONSE_DICT_FORMAT, CATEGORY_LEVEL_MAPPING, STORE_WH_MAP
 from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline, get_listing_pipeline_for_retail, \
     get_listing_pipeline_for_mall, get_brand_and_category_ids_for_retail, get_brand_and_category_ids_for_mall, \
-    get_brand_and_category_pipeline_for_mall
-from settings import SHARDED_SEARCH_DB, loop, ASYNC_SHARDED_SEARCH_DB
+    get_brand_and_category_pipeline_for_mall,is_group_pipeline
+from settings import SHARDED_SEARCH_DB
 from search_utils import SearchUtils
 
 app = FastAPI()
@@ -87,19 +87,20 @@ def product_search_v2(request: Request):
     is_group = request_data.get("is_group")
     if is_group == '0':
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
+        print(pipe_line)
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:
             response = SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipe_line).next()
     else:
-        pipe_line = group_autocomplete_stage(
+        print('hello')
+        pipe_line = is_group_pipeline(
             keyword, store_id, platform, order_type, skip, limit
         )
-        if order_type == 'mall':
-            response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
-        else:
-            response = SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipe_line).next()
-
+        print(pipe_line)
+        print('hello')
+        response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
+    print('hi')
     # Response Formatting
     response["data"] = (
         [str(i.get("id")) for i in response["data"]] if response["data"] else []
@@ -306,7 +307,7 @@ async def product_listing_v1(request: Request):
         #         ASYNC_SHARDED_SEARCH_DB["search_products"].aggregate(pipeline).to_list(None),
         #         ASYNC_SHARDED_SEARCH_DB["search_products"].aggregate(brand_category_pipeline).to_list(None),
         #     ]))
-            # parallel_db_calls_for_mall_listing_api(pipeline, filter_kwargs_for_brand_and_cat, warehouse_id))
+        # parallel_db_calls_for_mall_listing_api(pipeline, filter_kwargs_for_brand_and_cat, warehouse_id))
         # data = list(combined_data[0])
         # brand_category_data = list(combined_data[1])
         data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
