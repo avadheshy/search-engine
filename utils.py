@@ -164,6 +164,7 @@ for i in range(1,170000,10000):
             'tag_ids': '$data.tag_id'
         }
     }
+<<<<<<< HEAD
     ]
     data=list(DB['products'].aggregate(pipeline))
     payload=[]
@@ -211,3 +212,10 @@ DB['search_products'].bulk_write(payload)
     
 
 
+||||||| 0c653b4
+]
+=======
+]
+
+# connection = mysql.connector.connect(user='nagendra.kumar', password='EB91c7lNtPRdG5uD', host='127.0.0.1', database='pos',port='3310')
+>>>>>>> 4c8e26646d80b2a799ade7fd9dbcb3aa019bf510

@@ -13,6 +13,7 @@ CATEGORY_LEVEL_MAPPING = {
     "cl4": "4",
 }
 S3_BRAND_URL = "https://s3-ap-south-1.amazonaws.com/niyoos-test/media/brand/"
+S3_CATEGORY_URL = "https://s3-ap-south-1.amazonaws.com/niyoos-test/media/category/"     # TODO Have to change this URL
 STORE_WH_MAP = {
     "1": "3",
     "2": "3",
