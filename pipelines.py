@@ -1,84 +1,86 @@
 from constants import STORE_WH_MAP
-from settings import SHARDED_SEARCH_DB, ASYNC_SHARDED_SEARCH_DB
+from settings import SHARDED_SEARCH_DB
 
 GROUP_ADDITIONAL_STAGE = [
     {
         '$project': {
             '_id': 0, 'group_id': 1,
-            'stock': {"$first": "$data.stock"}
+            'stock': "$data.inv_qty"
         }
     },
-    # {'$sort': {'inv_qty': -1}},
     {
         '$group': {
             '_id': '$group_id',
-            # 'count': {
-            #     '$sum': "$stock"
-            # }
+            'count': {
+                '$sum': "$stock"
+            }
         }
     },
     {
         '$match': {
             '_id': {
                 '$ne': None
-            }
+            },
+            'count': {'$gt': 0},
         }
     },
     {
         '$project': {
             'id': '$_id',
             '_id': 0,
-            # "count": 1
+            "count": 1
         }
     },
-    # {
-    #     "$sort": {
-    #         "count": -1
-    #     }
-    # }
-]
-
-def listing_pipeline(skip, limit, match_filter):
-    return [
     {
-        '$match': match_filter
-    }, {
-        '$project': {
-            '_id': 0, 
-            'group_id': 1
-        }
-    }, {
-        '$group': {
-            '_id': '$group_id', 
-            'count': {
-                '$sum': 1
-            }
-        }
-    }, {
-        '$project': {
-            'id': '$_id', 
-            '_id': 0
-        }
-    }, {
-        '$facet': {
-            'total': [
-                {
-                    '$count': 'count'
-                }
-            ], 
-            'data': [
-                {
-                    '$skip': skip
-                }, {
-                    '$limit': limit
-                }
-            ]
+        "$sort": {
+            "count": -1
         }
     }
 ]
 
+
+def listing_pipeline(skip, limit, match_filter):
+    return [
+        {
+            '$match': match_filter
+        }, {
+            '$project': {
+                '_id': 0,
+                'group_id': 1
+            }
+        }, {
+            '$group': {
+                '_id': '$group_id',
+                'count': {
+                    '$sum': 1
+                }
+            }
+        }, {
+            '$project': {
+                'id': '$_id',
+                '_id': 0
+            }
+        }, {
+            '$facet': {
+                'total': [
+                    {
+                        '$count': 'count'
+                    }
+                ],
+                'data': [
+                    {
+                        '$skip': skip
+                    }, {
+                        '$limit': limit
+                    }
+                ]
+            }
+        }
+    ]
+
+
 def get_boosting_stage(
-    keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
+        keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
 ):
     search_terms_len = len(keyword.split(" "))
     SEARCH_PIPE = []
@@ -143,12 +145,14 @@ def get_boosting_stage(
                     "foreignField": "product_id",
                     "as": "data",
                     "pipeline": [
-                        {"$match": {"warehouse_id": wh_id, 'stock': {"$gt": 0}}},
-                        {"$project": {"warehouse_id": 1, "stock": 1}},
+                        {"$match": {"warehouse_id": wh_id}},
+                        {"$project": {"warehouse_id": 1, "inv_qty": "$stock"}},
                     ],
                 }
             },
-            {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"}}},
+            {"$unwind": "$data"},
+            {"$project": {"_id": 0, "id": 1, "stock": "$data.inv_qty"}},
+            {'$match': {'stock': {'$gt': 0}}},
             {"$sort": {"stock": -1}},
             {
                 "$facet": {
@@ -179,11 +183,11 @@ def get_boosting_stage(
                         },
                         {"$project": {"store_id": 1, "_id": 0, "inv_qty": 1}},
                     ],
-                    "as": "store",
+                    "as": "data",
                 }
             },
-            {"$match": {"store.store_id": store_id,'store.inv_qty':{'$gt':0}}},
-            {"$project": {"_id": 0, "id": 1, "inv_qty": {"$first": "$store.inv_qty"}}},
+            {"$match": {"store.store_id": store_id}},
+            {"$project": {"_id": 0, "id": 1, "inv_qty": {"$first": "$data.inv_qty"}}},
             {"$sort": {"inv_qty": -1}},
             {
                 "$facet": {
@@ -195,9 +199,8 @@ def get_boosting_stage(
     return PIPELINE
 
 
-
 def get_pipeline_from_sharded_collection(
-    keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
+        keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
 ):
     search_terms_len = len(keyword.split(" "))
     SEARCH_PIPE = []
@@ -243,7 +246,7 @@ def get_pipeline_from_sharded_collection(
     if order_type == "mall":
         is_mall = "1"
     else:
-        match_filter['inv_qty']={'$gt':0}
+        match_filter['inv_qty'] = {'$gt': 0}
     match_filter["is_mall"] = is_mall
 
     if platform == "app":
@@ -276,12 +279,13 @@ def get_pipeline_from_sharded_collection(
                     "foreignField": "product_id",
                     "as": "data",
                     "pipeline": [
-                        {"$match": {"warehouse_id": wh_id, 'stock': {"$gt": 0}}},
-                        {"$project": {"warehouse_id": 1, "stock": 1}},
+                        {"$match": {"warehouse_id": wh_id}},
+                        {"$project": {"warehouse_id": 1, "inv_qty": '$stock'}},
                     ],
                 }
             },
-            {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"}}},
+            {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.inv_qty"}}},
+            {'$match': {'stock': {'$gt': 0}}},
             {"$sort": {"stock": -1}},
             {
                 "$facet": {
@@ -293,6 +297,7 @@ def get_pipeline_from_sharded_collection(
 
     return PIPELINE
 
+
 def get_search_pipeline(keyword, store_id, platform, order_type, skip, limit):
     pipe_line = []
     if order_type == 'mall':
@@ -303,12 +308,13 @@ def get_search_pipeline(keyword, store_id, platform, order_type, skip, limit):
 
 
 def group_autocomplete_stage(
-    keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
+        keyword="", store_id="", platform="pos", order_type="retail", skip=0, limit=10
 ):
     PIPELINE = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
-    print(PIPELINE)
-    NEW_GROUP_PIPELINE = PIPELINE[:-3] + GROUP_ADDITIONAL_STAGE + [PIPELINE[-1]]
-    # print(NEW_GROUP_PIPELINE)
+
+    if order_type == 'retail':
+        GROUP_ADDITIONAL_STAGE[0] = {'$project': {'_id': 0, 'group_id': 1, 'stock': "$inv_qty"}}
+    NEW_GROUP_PIPELINE = PIPELINE[:-4] + GROUP_ADDITIONAL_STAGE + [PIPELINE[-1]]
     return NEW_GROUP_PIPELINE
 
 
@@ -367,7 +373,7 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
         }
     ]
     if sort_query:
-        pipeline.insert(-3,{'$sort':sort_query})
+        pipeline.insert(-3, {'$sort': sort_query})
     return pipeline
 
 
@@ -510,9 +516,10 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
 
 def get_brand_and_category_ids_for_retail(filter_kwargs):
     filter_kwargs.update(inv_qty={"$gt": 0})
-    all_data = list(SHARDED_SEARCH_DB["product_store_sharded"].find(filter_kwargs, {"_id": 0, "brand_id": 1, "category_id": 1}))
-    brand_ids = list(set([str(data.get('brand_id'))for data in all_data if data.get('brand_id')]))
-    category_ids = list(set([str(data.get('category_id'))for data in all_data if data.get('category_id')]))
+    all_data = list(
+        SHARDED_SEARCH_DB["product_store_sharded"].find(filter_kwargs, {"_id": 0, "brand_id": 1, "category_id": 1}))
+    brand_ids = list(set([str(data.get('brand_id')) for data in all_data if data.get('brand_id')]))
+    category_ids = list(set([str(data.get('category_id')) for data in all_data if data.get('category_id')]))
     return brand_ids, category_ids
 
 

@@ -1,20 +1,15 @@
 from mysql import connector
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne, UpdateMany
-
-CLIENT = MongoClient(
-    "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
-)
-DB = CLIENT.product_search
-
+from  settings import  USER,HOST,PASSWORD,SHARDED_SEARCH_DB
 
 def sync_all_categories():
     current_time = datetime.now()
     prev_time = current_time - timedelta(days=15)
     connection = connector.connect(
-        host="pos-prod-aurora.cluster-ro-crvi1ow7nyif.ap-south-1.rds.amazonaws.com",
-        user="nagendra.kumar",
-        password="EB91c7lNtPRdG5uD"
+        host=HOST,
+        user=USER,
+        password=PASSWORD
     )
     cur1 = connection.cursor()
     Query1 = "SELECT * FROM  pos.all_categories WHERE all_categories.updated_at > %s OR all_categories.created_at > %s"
@@ -58,9 +53,9 @@ def brands_sync():
     current_time = datetime.now()
     prev_time = current_time - timedelta(days=15)
     connection = connector.connect(
-        host="pos-prod-aurora.cluster-ro-crvi1ow7nyif.ap-south-1.rds.amazonaws.com",
-        user="nagendra.kumar",
-        password="EB91c7lNtPRdG5uD"
+        host=HOST,
+        user=USER,
+        password=PASSWORD
     )
     cur1 = connection.cursor()
     Query1 = "SELECT * FROM  pos.brands WHERE brands.updated_at > %s OR brands.created_at > %s"
@@ -96,9 +91,9 @@ def score_sync():
     current_time = datetime.now()
     prev_time = current_time - timedelta(minutes=60)
     connection = connector.connect(
-        host="pos-prod-aurora.cluster-ro-crvi1ow7nyif.ap-south-1.rds.amazonaws.com",
-        user="nagendra.kumar",
-        password="EB91c7lNtPRdG5uD"
+        host=HOST,
+        user=USER,
+        password=PASSWORD
     )
     cur1 = connection.cursor()
     Query1 = "SELECT product_id FROM  pos.order_items WHERE updated_at > %s OR created_at > %s"

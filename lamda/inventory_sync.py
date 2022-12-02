@@ -4,17 +4,13 @@ import json
 from mysql import connector
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne
-
-
-
-CLIENT = MongoClient("mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")
-DB = CLIENT.product_search
+from  settings import  USER,HOST,PASSWORD,SHARDED_SEARCH_DB
 current_time = datetime.now()
 prev_time = current_time - timedelta(hours=2)
 connection = connector.connect(
-      host="pos-prod-aurora.cluster-ro-crvi1ow7nyif.ap-south-1.rds.amazonaws.com",
-      user="nagendra.kumar",
-      password="EB91c7lNtPRdG5uD"
+      host=HOST,
+      user=USER,
+      password=PASSWORD
     )
 cur2 = connection.cursor()
 Query = "SELECT * FROM  pos.inventories WHERE inventories.updated_at > %s OR inventories.created_at > %s"
@@ -100,13 +96,13 @@ def sync_inventories(result):
         res["panel"] = "cron"
         payload.append(UpdateOne(query, {"$set": res}, upsert=True))
     if payload:    
-        DB["inventories"].bulk_write(payload)
+        SHARDED_SEARCH_DB["inventories"].bulk_write(payload)
     INVENTORY_PIPELINE = [{"$match": {"store_id": {"$in": store_ids}, "product_id": {"$in": p_ids}}}] + INVENTORY_COUNT
-    inventory_count = DB["inventories"].aggregate(INVENTORY_PIPELINE)
+    inventory_count = SHARDED_SEARCH_DB["inventories"].aggregate(INVENTORY_PIPELINE)
     update_product_payload = []
     for inv_count in inventory_count:
         update_product_payload.append(UpdateOne({'product_id': inv_count.get('product_id'), 'store_id': inv_count.get('store_id')}, {"$set": {"inv_qty": inv_count.get("inv_qty"), "qty_source": "cron"}}))
-    DB['product_store'].bulk_write(update_product_payload)
+    SHARDED_SEARCH_DB['product_store'].bulk_write(update_product_payload)
     return True, "Data Synced Successfully."
 def lambda_handler(event, context):
     print("function started!")

@@ -1,19 +1,16 @@
 from mysql import connector
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne,UpdateMany
+from  settings import  USER,HOST,PASSWORD,SHARDED_SEARCH_DB
 
-CLIENT = MongoClient(
-    "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
-)
-DB = CLIENT.product_search
 
 def sync_product_tag():
     current_time = datetime.now()
     prev_time = current_time - timedelta(hours=2)
     connection = connector.connect(
-        host="pos-prod-aurora.cluster-ro-crvi1ow7nyif.ap-south-1.rds.amazonaws.com",
-        user="nagendra.kumar",
-        password="EB91c7lNtPRdG5uD"
+        host=HOST,
+        user=USER,
+        password=PASSWORD
     )
     cur = connection.cursor()
     Query1 = "SELECT * FROM  pos.product_tag WHERE product_tag.updated_at > %s OR product_tag.created_at > %s"
@@ -45,9 +42,9 @@ def sync_product_tag():
         UpdateOne({"id": res.get("product_id")}, {"$set": {'$push': {'tag_ids': res.get('tag_id')}}}))
         payload1.append(UpdateMany({"product_id": res.get("product_id")}, {"$set": {'$push': {'tag_ids': res.get('tag_id')}}}))
     if payload:
-        DB["search_products"].bulk_write(payload)
+        SHARDED_SEARCH_DB["search_products"].bulk_write(payload)
     if payload1:
-        DB["product_store_sharded"].bulk_write(payload1)
+        SHARDED_SEARCH_DB["product_store_sharded"].bulk_write(payload1)
 
     data = []
     for res in result2:
@@ -64,9 +61,9 @@ def sync_product_tag():
         payload1.append(
             UpdateMany({"product_id": res.get("product_id")}, {"$set": {'$pull': {'tag_ids': res.get('tag_id')}}}))
     if payload:
-        DB["search_products"].bulk_write(payload)
+        SHARDED_SEARCH_DB["search_products"].bulk_write(payload)
     if payload1:
-        DB["product_store_sharded"].bulk_write(payload1)
+        SHARDED_SEARCH_DB["product_store_sharded"].bulk_write(payload1)
 
 
     return True, "Syncing was successfull."

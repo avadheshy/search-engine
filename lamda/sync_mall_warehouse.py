@@ -3,11 +3,8 @@ from mysql import connector
 
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne
+from  settings import  USER,HOST,PASSWORD,SHARDED_SEARCH_DB
 
-CLIENT = MongoClient(
-    "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
-)
-DB = CLIENT.product_search
 
 current_time = datetime.now()
 prev_time = current_time - timedelta(hours=180)
@@ -15,9 +12,9 @@ prev_time = current_time - timedelta(hours=180)
 f = "%Y-%m-%d %H:%M:%S"
 def sync_mall_data(prev_time):
     connection = connector.connect(
-    host="pos-prod-aurora.cluster-ro-crvi1ow7nyif.ap-south-1.rds.amazonaws.com",
-    user="nagendra.kumar",
-    password="EB91c7lNtPRdG5uD"
+        host=HOST,
+        user=USER,
+        password=PASSWORD
     )
     cur = connection.cursor()
     Query1 = "SELECT * FROM  pos.product_warehouse_stocks WHERE product_warehouse_stocks.created_at > %s OR product_warehouse_stocks.updated_at > %s"
@@ -53,7 +50,7 @@ def sync_mall_data(prev_time):
         res["warehouse_id"]=str(res["warehouse_id"])
         payload.append(UpdateOne(query, {"$set": res}))
     if payload:
-        DB["product_warehouse_stocks"].bulk_write(payload)
+        SHARDED_SEARCH_DB["product_warehouse_stocks"].bulk_write(payload)
     connection.close()
     return True, "Syncing was successfull."
 

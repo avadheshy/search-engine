@@ -12,11 +12,12 @@ load_dotenv(dotenv_path=dotenv_path)
 
 ENVIRONMENT = os.getenv('ENVIRONMENT')
 
-
+HOST = os.getenv('PROD_SQL_HOST')
+USER = os.getenv('PROD_SQL_USER')
+PASSWORD = os.getenv('PROD_SQL_PASSWORD')
 # Making connection with Mongo using PyMongo
 SHARDED_SEARCH_MONGO_CONNECTION = MongoClient(os.getenv('SHARDED_SEARCH_DB_SRV'))
 SHARDED_SEARCH_DB = SHARDED_SEARCH_MONGO_CONNECTION[os.getenv('SHARDED_SEARCH_DB_NAME')]
-
 
 # Making connection with Mongo using Motor for Async DB calls
 # import nest_asyncio
@@ -27,7 +28,6 @@ SHARDED_SEARCH_CLIENT_ASYNC = motor.motor_asyncio.AsyncIOMotorClient(io_loop=loo
                                                                      host=os.getenv('SHARDED_SEARCH_DB_SRV'),
                                                                      tlsInsecure=True)
 ASYNC_SHARDED_SEARCH_DB = SHARDED_SEARCH_CLIENT_ASYNC[os.getenv('SHARDED_SEARCH_DB_NAME')]
-
 
 # Sentry Connection
 SENTRY_BACKEND_PROJECT_DSN = os.getenv('SENTRY_BACKEND_PROJECT_DSN')

@@ -2,10 +2,8 @@ import json
 from mysql import connector
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne
+from  settings import  USER,HOST,PASSWORD,SHARDED_SEARCH_DB
 
-CLIENT = MongoClient("mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")
-
-DB = CLIENT.product_search
 
 
 
@@ -14,10 +12,10 @@ def sync_product_store():
     current_time = datetime.now()
     prev_time = current_time - timedelta(minutes=10)
     connection = connector.connect(
-          host="pos-prod-aurora.cluster-ro-crvi1ow7nyif.ap-south-1.rds.amazonaws.com",
-          user="nagendra.kumar",
-          password="EB91c7lNtPRdG5uD"
-        )
+        host=HOST,
+        user=USER,
+        password=PASSWORD
+    )
     cur1 = connection.cursor()
     Query1 = "SELECT * FROM  pos.product_store WHERE product_store.updated_at >= %s OR product_store.created_at >= %s"
     cur1.execute(Query1, (prev_time, prev_time, ))
@@ -60,7 +58,7 @@ def sync_product_store():
         res["sale_pos"] = str(res["sale_pos"])
         res["sale_app"] = str(res["sale_app"])
         res["panel"] = 'cron'
-    p_data = DB["products"].find({'id': {'$in': product_ids}})
+    p_data = SHARDED_SEARCH_DB["products"].find({'id': {'$in': product_ids}})
     p_data_map = {}
     for i in p_data:
         is_mall = "1" if i.get("is_mall") in [1, "1"] else "0"
@@ -71,7 +69,7 @@ def sync_product_store():
         payload.append(UpdateOne(query, {"$set": resp}, upsert=True))
     if payload:
         print(payload)
-        DB["product_store_sharded"].bulk_write(payload)
+        SHARDED_SEARCH_DB["product_store_sharded"].bulk_write(payload)
     return True, "Syncing was successfull."
 
 def lambda_handler(event, context):

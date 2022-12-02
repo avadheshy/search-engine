@@ -42,7 +42,6 @@ async def product_search(request: Request):
         limit = int(request_data.get("limit")) if request_data.get("limit") else 10
         # DB Query
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
-        print(pipe_line)
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:
@@ -88,7 +87,6 @@ def product_search_v2(request: Request):
     is_group = request_data.get("should_group", "").lower()
     if is_group == 'false':
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
-        print(pipe_line)
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:
