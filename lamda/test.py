@@ -3,19 +3,12 @@
 # from datetime import datetime, timedelta
 # from pymongo import MongoClient, UpdateOne
 #
-# CLIENT = MongoClient("mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")
-#
-# DB = CLIENT.product_search
 #
 #
 # def sync_product_store():
 #     current_time = datetime.now()
 #     prev_time = current_time - timedelta(hours=12)
-#     conn = connector.connect(
-#         host="pos-prod-aurora.cluster-ro-crvi1ow7nyif.ap-south-1.rds.amazonaws.com",
-#         user="nagendra.kumar",
-#         password="EB91c7lNtPRdG5uD"
-#     )
+
 #     cur1 = conn.cursor()
 #     Query1 = "SELECT * FROM  pos.product_store WHERE product_store.updated_at >= %s OR product_store.created_at >= %s"
 #     cur1.execute(Query1, (prev_time, prev_time,))
@@ -97,38 +90,32 @@ import copy
 from mysql import connector
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne
-from metaphone import doublemetaphone
-
-CLIENT = MongoClient("mongodb+srv://sharded-search-service:KC2718oU0Jt9Qt7v@search-service.ynzkd.mongodb.net/test")
-DB = CLIENT.product_search
+from settings import POS_SQL_USER, POS_SQL_PASSWORD, POS_SQL_HOST, SHARDED_SEARCH_DB
 
 
-def get_sounds_like(name):
-    items = name.split(' ')
-    sounds_like = []
-    for j in items:
-        a, b = doublemetaphone(j)
-        if a:
-            sounds_like.append(a)
-        if b:
-            sounds_like.append(b)
-    sounds_like = ' '.join(set(sounds_like))
-    return sounds_like
+# def get_sounds_like(name):
+#     items = name.split(' ')
+#     sounds_like = []
+#     for j in items:
+#         a, b = doublemetaphone(j)
+#         if a:
+#             sounds_like.append(a)
+#         if b:
+#             sounds_like.append(b)
+#     sounds_like = ' '.join(set(sounds_like))
+#     return sounds_like
 
 
 def sync_product_data():
-
     current_time = datetime.now()
     prev_time = current_time - timedelta(hours=15)
 
     f = "%Y-%m-%d %H:%M:%S"
-    # connection = connector.connect(
-    #     host="pos-prod-aurora.cluster-ro-crvi1ow7nyif.ap-south-1.rds.amazonaws.com",
-    #     user="nagendra.kumar",
-    #     password="EB91c7lNtPRdG5uD"
-    # )
-    connection = connector.connect(user='nagendra.kumar', password='EB91c7lNtPRdG5uD', host='127.0.0.1', database='pos',
-                                   port='3310')
+    connection = connector.connect(
+        host=POS_SQL_HOST,
+        user=POS_SQL_USER,
+        password=POS_SQL_PASSWORD
+    )
     cur = connection.cursor()
     Query1 = "SELECT * FROM  pos.products WHERE products.created_at >= %s OR products.updated_at >= %s"
     # Query1 = "SELECT * FROM  pos.products WHERE products.id = 136055"
@@ -187,7 +174,7 @@ def sync_product_data():
     all_category_ids = set()
     for i in data:
         all_category_ids.add(i.get('category_id'))
-    all_category_ids=tuple(all_category_ids)
+    all_category_ids = tuple(all_category_ids)
     category_map = {}
     if all_category_ids:
         category_query = str(

@@ -1,27 +1,24 @@
-
 from mysql import connector
 
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne
-
-CLIENT = MongoClient(
-    "mongodb+srv://searchengine-appuser:qJSjAhUkcAlyuAwy@search-service.ynzkd.mongodb.net/?retryWrites=true&w=majority"
-)
-DB = CLIENT.product_search
+from settings import POS_SQL_PASSWORD, POS_SQL_USER, POS_SQL_HOST, SHARDED_SEARCH_DB
 
 current_time = datetime.now()
 prev_time = current_time - timedelta(hours=180)
 
 f = "%Y-%m-%d %H:%M:%S"
+
+
 def sync_mall_data(prev_time):
     connection = connector.connect(
-    host="pos-prod-aurora.cluster-ro-crvi1ow7nyif.ap-south-1.rds.amazonaws.com",
-    user="nagendra.kumar",
-    password="EB91c7lNtPRdG5uD"
+        host=POS_SQL_HOST,
+        user=POS_SQL_USER,
+        password=POS_SQL_PASSWORD
     )
     cur = connection.cursor()
     Query1 = "SELECT * FROM  pos.product_warehouse_stocks WHERE product_warehouse_stocks.created_at > %s OR product_warehouse_stocks.updated_at > %s"
-    cur.execute(Query1, (prev_time,prev_time,))
+    cur.execute(Query1, (prev_time, prev_time,))
     result = cur.fetchall()
     keys1 = [
         'id',
@@ -49,16 +46,16 @@ def sync_mall_data(prev_time):
         query = {}
         query["product_id"] = str(res["product_id"])
         query["warehouse_id"] = str(res["warehouse_id"])
-        res["product_id"]=str(res["product_id"])
-        res["warehouse_id"]=str(res["warehouse_id"])
+        res["product_id"] = str(res["product_id"])
+        res["warehouse_id"] = str(res["warehouse_id"])
         payload.append(UpdateOne(query, {"$set": res}))
     if payload:
-        DB["product_warehouse_stocks"].bulk_write(payload)
+        SHARDED_SEARCH_DB["product_warehouse_stocks"].bulk_write(payload)
     connection.close()
     return True, "Syncing was successfull."
 
-def lambda_handler(event, context):
 
+def lambda_handler(event, context):
     print("function started!")
     if event["trigger"] == "success":
         print("trigger block!")

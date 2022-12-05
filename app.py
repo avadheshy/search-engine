@@ -84,8 +84,8 @@ def product_search_v2(request: Request):
     platform = request_data.get("platform")  # pos / app
     skip = int(request_data.get("skip")) if request_data.get("skip") else 0
     limit = int(request_data.get("limit")) if request_data.get("limit") else 10
-    is_group = request_data.get("is_group")
-    if is_group == '0':
+    is_group = request_data.get("should_group", "").lower()
+    if is_group == 'false':
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
@@ -95,6 +95,7 @@ def product_search_v2(request: Request):
         pipe_line = group_autocomplete_stage(
             keyword, store_id, platform, order_type, skip, limit
         )
+        # print("pipe_line : ", pipe_line)
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:
