@@ -90,7 +90,7 @@ import copy
 from mysql import connector
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne
-from  settings import  PROD_SQL_USER,PROD_SQL_PASSWORD,PROD_SQL_HOST,SHARDED_SEARCH_DB
+from settings import POS_SQL_USER, POS_SQL_PASSWORD, POS_SQL_HOST, SHARDED_SEARCH_DB
 
 
 # def get_sounds_like(name):
@@ -107,15 +107,14 @@ from  settings import  PROD_SQL_USER,PROD_SQL_PASSWORD,PROD_SQL_HOST,SHARDED_SEA
 
 
 def sync_product_data():
-
     current_time = datetime.now()
     prev_time = current_time - timedelta(hours=15)
 
     f = "%Y-%m-%d %H:%M:%S"
     connection = connector.connect(
-        host=PROD_SQL_HOST,
-        user=PROD_SQL_USER,
-        password=PROD_SQL_PASSWORD
+        host=POS_SQL_HOST,
+        user=POS_SQL_USER,
+        password=POS_SQL_PASSWORD
     )
     cur = connection.cursor()
     Query1 = "SELECT * FROM  pos.products WHERE products.created_at >= %s OR products.updated_at >= %s"
@@ -175,7 +174,7 @@ def sync_product_data():
     all_category_ids = set()
     for i in data:
         all_category_ids.add(i.get('category_id'))
-    all_category_ids=tuple(all_category_ids)
+    all_category_ids = tuple(all_category_ids)
     category_map = {}
     if all_category_ids:
         category_query = str(

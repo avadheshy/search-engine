@@ -12,9 +12,10 @@ load_dotenv(dotenv_path=dotenv_path)
 
 ENVIRONMENT = os.getenv('ENVIRONMENT')
 
-PROD_SQL_HOST = os.getenv('PROD_SQL_HOST')
-PROD_SQL_USER = os.getenv('PROD_SQL_USER')
-PROD_SQL_PASSWORD = os.getenv('PROD_SQL_PASSWORD')
+POS_SQL_HOST = os.getenv('POS_SQL_HOST')
+POS_SQL_USER = os.getenv('POS_SQL_USER')
+POS_SQL_PASSWORD = os.getenv('POS_SQL_PASSWORD')
+
 # Making connection with Mongo using PyMongo
 SHARDED_SEARCH_MONGO_CONNECTION = MongoClient(os.getenv('SHARDED_SEARCH_DB_SRV'))
 SHARDED_SEARCH_DB = SHARDED_SEARCH_MONGO_CONNECTION[os.getenv('SHARDED_SEARCH_DB_NAME')]

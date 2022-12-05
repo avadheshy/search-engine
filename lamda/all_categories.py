@@ -1,15 +1,15 @@
 from mysql import connector
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne, UpdateMany
-from  settings import  PROD_SQL_USER,PROD_SQL_PASSWORD,PROD_SQL_HOST,SHARDED_SEARCH_DB
+from settings import POS_SQL_USER, POS_SQL_PASSWORD, POS_SQL_HOST, SHARDED_SEARCH_DB
 
 def sync_all_categories():
     current_time = datetime.now()
     prev_time = current_time - timedelta(days=15)
     connection = connector.connect(
-        host=PROD_SQL_HOST,
-        user=PROD_SQL_USER,
-        password=PROD_SQL_PASSWORD
+        host=POS_SQL_HOST,
+        user=POS_SQL_USER,
+        password=POS_SQL_PASSWORD
 
     )
     cur1 = connection.cursor()

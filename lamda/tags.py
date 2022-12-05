@@ -1,16 +1,16 @@
 from mysql import connector
 from datetime import datetime, timedelta
-from pymongo import MongoClient, UpdateOne,UpdateMany
-from  settings import  PROD_SQL_HOST,PROD_SQL_PASSWORD,PROD_SQL_USER,SHARDED_SEARCH_DB
+from pymongo import MongoClient, UpdateOne, UpdateMany
+from settings import POS_SQL_HOST, POS_SQL_PASSWORD, POS_SQL_USER, SHARDED_SEARCH_DB
 
 
 def sync_product_tag():
     current_time = datetime.now()
     prev_time = current_time - timedelta(hours=2)
     connection = connector.connect(
-        host=PROD_SQL_HOST,
-        user=PROD_SQL_USER,
-        password=PROD_SQL_PASSWORD
+        host=POS_SQL_HOST,
+        user=POS_SQL_USER,
+        password=POS_SQL_PASSWORD
     )
     cur = connection.cursor()
     Query1 = "SELECT * FROM  pos.product_tag WHERE product_tag.updated_at > %s OR product_tag.created_at > %s"
@@ -36,11 +36,12 @@ def sync_product_tag():
         data.append(d)
 
     payload = []
-    payload1=[]
+    payload1 = []
     for res in data:
         payload.append(
-        UpdateOne({"id": res.get("product_id")}, {"$set": {'$push': {'tag_ids': res.get('tag_id')}}}))
-        payload1.append(UpdateMany({"product_id": res.get("product_id")}, {"$set": {'$push': {'tag_ids': res.get('tag_id')}}}))
+            UpdateOne({"id": res.get("product_id")}, {"$set": {'$push': {'tag_ids': res.get('tag_id')}}}))
+        payload1.append(
+            UpdateMany({"product_id": res.get("product_id")}, {"$set": {'$push': {'tag_ids': res.get('tag_id')}}}))
     if payload:
         SHARDED_SEARCH_DB["search_products"].bulk_write(payload)
     if payload1:
@@ -64,7 +65,6 @@ def sync_product_tag():
         SHARDED_SEARCH_DB["search_products"].bulk_write(payload)
     if payload1:
         SHARDED_SEARCH_DB["product_store_sharded"].bulk_write(payload1)
-
 
     return True, "Syncing was successfull."
 
