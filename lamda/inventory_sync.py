@@ -4,13 +4,13 @@ import json
 from mysql import connector
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne
-from  settings import  USER,HOST,PASSWORD,SHARDED_SEARCH_DB
+from  settings import  PROD_SQL_PASSWORD,PROD_SQL_USER,PROD_SQL_HOST,SHARDED_SEARCH_DB
 current_time = datetime.now()
 prev_time = current_time - timedelta(hours=2)
 connection = connector.connect(
-      host=HOST,
-      user=USER,
-      password=PASSWORD
+    host=PROD_SQL_HOST,
+    user=PROD_SQL_USER,
+    password=PROD_SQL_PASSWORD
     )
 cur2 = connection.cursor()
 Query = "SELECT * FROM  pos.inventories WHERE inventories.updated_at > %s OR inventories.created_at > %s"

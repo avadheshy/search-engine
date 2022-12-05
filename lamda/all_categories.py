@@ -1,15 +1,16 @@
 from mysql import connector
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne, UpdateMany
-from  settings import  USER,HOST,PASSWORD,SHARDED_SEARCH_DB
+from  settings import  PROD_SQL_USER,PROD_SQL_PASSWORD,PROD_SQL_HOST,SHARDED_SEARCH_DB
 
 def sync_all_categories():
     current_time = datetime.now()
     prev_time = current_time - timedelta(days=15)
     connection = connector.connect(
-        host=HOST,
-        user=USER,
-        password=PASSWORD
+        host=PROD_SQL_HOST,
+        user=PROD_SQL_USER,
+        password=PROD_SQL_PASSWORD
+
     )
     cur1 = connection.cursor()
     Query1 = "SELECT * FROM  pos.all_categories WHERE all_categories.updated_at > %s OR all_categories.created_at > %s"

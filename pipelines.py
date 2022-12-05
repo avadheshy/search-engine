@@ -21,7 +21,7 @@ GROUP_ADDITIONAL_STAGE = [
             '_id': {
                 '$ne': None
             },
-            'count': {'$gt': 0},
+            'count': {'$gte': 0},
         }
     },
     {
@@ -152,7 +152,7 @@ def get_boosting_stage(
             },
             {"$unwind": "$data"},
             {"$project": {"_id": 0, "id": 1, "stock": "$data.inv_qty"}},
-            {'$match': {'stock': {'$gt': 0}}},
+            {'$match': {'stock': {'$gte': 0}}},
             {"$sort": {"stock": -1}},
             {
                 "$facet": {
@@ -168,7 +168,7 @@ def get_boosting_stage(
             {"$match": match_filter},
             {
                 "$lookup": {
-                    "from": "product_store_sharded",
+                    "from": "product_store",
                     "let": {"product_id": "$id"},
                     "pipeline": [
                         {
@@ -246,7 +246,7 @@ def get_pipeline_from_sharded_collection(
     if order_type == "mall":
         is_mall = "1"
     else:
-        match_filter['inv_qty'] = {'$gt': 0}
+        match_filter['inv_qty'] = {'$gte': 0}
     match_filter["is_mall"] = is_mall
 
     if platform == "app":
@@ -285,7 +285,7 @@ def get_pipeline_from_sharded_collection(
                 }
             },
             {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.inv_qty"}}},
-            {'$match': {'stock': {'$gt': 0}}},
+            {'$match': {'stock': {'$gte': 0}}},
             {"$sort": {"stock": -1}},
             {
                 "$facet": {

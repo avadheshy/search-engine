@@ -90,7 +90,7 @@ import copy
 from mysql import connector
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne
-from  settings import  USER,HOST,PASSWORD,SHARDED_SEARCH_DB
+from  settings import  PROD_SQL_USER,PROD_SQL_PASSWORD,PROD_SQL_HOST,SHARDED_SEARCH_DB
 
 
 # def get_sounds_like(name):
@@ -113,9 +113,9 @@ def sync_product_data():
 
     f = "%Y-%m-%d %H:%M:%S"
     connection = connector.connect(
-        host=HOST,
-        user=USER,
-        password=PASSWORD
+        host=PROD_SQL_HOST,
+        user=PROD_SQL_USER,
+        password=PROD_SQL_PASSWORD
     )
     cur = connection.cursor()
     Query1 = "SELECT * FROM  pos.products WHERE products.created_at >= %s OR products.updated_at >= %s"

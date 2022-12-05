@@ -3,7 +3,7 @@ from mysql import connector
 
 from datetime import datetime, timedelta
 from pymongo import MongoClient, UpdateOne
-from  settings import  USER,HOST,PASSWORD,SHARDED_SEARCH_DB
+from  settings import  PROD_SQL_PASSWORD,PROD_SQL_USER,PROD_SQL_HOST,SHARDED_SEARCH_DB
 
 
 current_time = datetime.now()
@@ -12,9 +12,9 @@ prev_time = current_time - timedelta(hours=180)
 f = "%Y-%m-%d %H:%M:%S"
 def sync_mall_data(prev_time):
     connection = connector.connect(
-        host=HOST,
-        user=USER,
-        password=PASSWORD
+        host=PROD_SQL_HOST,
+        user=PROD_SQL_USER,
+        password=PROD_SQL_PASSWORD
     )
     cur = connection.cursor()
     Query1 = "SELECT * FROM  pos.product_warehouse_stocks WHERE product_warehouse_stocks.created_at > %s OR product_warehouse_stocks.updated_at > %s"
