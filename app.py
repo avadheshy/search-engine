@@ -22,7 +22,7 @@ async def read_main():
     return {"msg": "Hello World"}
 
 
-@app.post("/v1/search")
+@app.post(ApiUrlConstants.V1_PRODUCT_SEARCH)
 async def product_search(request: Request):
     """
     Product Search API, This will help to discover the relevant products
@@ -67,7 +67,7 @@ async def product_search(request: Request):
     return response
 
 
-@app.get("/v2/search")
+@app.get(ApiUrlConstants.V2_PRODUCT_SEARCH_FOR_GROUP)
 def product_search_v2(request: Request):
     """
     Product Search API, This will help to discover the relevant products
@@ -88,7 +88,7 @@ def product_search_v2(request: Request):
     if is_group == 'false':
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
 
-        print("pipe_line : ", pipe_line)
+
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:
@@ -97,7 +97,6 @@ def product_search_v2(request: Request):
         pipe_line = group_autocomplete_stage(
             keyword, store_id, platform, order_type, skip, limit
         )
-        print("pipe_line : ", pipe_line)
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:
@@ -119,7 +118,7 @@ def product_search_v2(request: Request):
     return response
 
 
-@app.get("/store_map")
+@app.get(ApiUrlConstants.STORE_MAP)
 def store_warehouse_map(request: Request):
     wh_store_map = list(SHARDED_SEARCH_DB['stores'].find({}, {"fulfil_warehouse_id": 1, "id": 1, "_id": 0}))
     WAREHOUSE_KIRANA_MAP = {}
@@ -311,8 +310,7 @@ async def product_listing_v1(request: Request):
             # parallel_db_calls_for_mall_listing_api(pipeline, filter_kwargs_for_brand_and_cat, warehouse_id))
         # data = list(combined_data[0])
         # brand_category_data = list(combined_data[1])
-        print(pipeline)
-        print(brand_category_pipeline)
+
         data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
         brand_category_data = list(SHARDED_SEARCH_DB["search_products"].aggregate(brand_category_pipeline))
         brand_ids, category_ids = get_brand_and_category_ids_for_mall(brand_category_data)
