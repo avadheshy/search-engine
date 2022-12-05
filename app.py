@@ -87,6 +87,8 @@ def product_search_v2(request: Request):
     is_group = request_data.get("should_group", "").lower()
     if is_group == 'false':
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
+
+        print("pipe_line : ", pipe_line)
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:
@@ -95,7 +97,7 @@ def product_search_v2(request: Request):
         pipe_line = group_autocomplete_stage(
             keyword, store_id, platform, order_type, skip, limit
         )
-        # print("pipe_line : ", pipe_line)
+        print("pipe_line : ", pipe_line)
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:
@@ -309,6 +311,8 @@ async def product_listing_v1(request: Request):
             # parallel_db_calls_for_mall_listing_api(pipeline, filter_kwargs_for_brand_and_cat, warehouse_id))
         # data = list(combined_data[0])
         # brand_category_data = list(combined_data[1])
+        print(pipeline)
+        print(brand_category_pipeline)
         data = list(SHARDED_SEARCH_DB["search_products"].aggregate(pipeline))
         brand_category_data = list(SHARDED_SEARCH_DB["search_products"].aggregate(brand_category_pipeline))
         brand_ids, category_ids = get_brand_and_category_ids_for_mall(brand_category_data)
