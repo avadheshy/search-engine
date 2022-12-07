@@ -11,6 +11,7 @@ dotenv_path = Path('.env')
 load_dotenv(dotenv_path=dotenv_path)
 
 ENVIRONMENT = os.getenv('ENVIRONMENT')
+CHECK_BOOSTING_OF_PRODUCTS = True if os.getenv('CHECK_BOOSTING_OF_PRODUCTS').lower() == "true" else False
 
 POS_SQL_HOST = os.getenv('POS_SQL_HOST')
 POS_SQL_USER = os.getenv('POS_SQL_USER')

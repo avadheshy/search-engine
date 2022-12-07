@@ -2,9 +2,10 @@ import asyncio
 from collections import Counter
 from datetime import datetime
 import json
+from typing import List
 import math
-
-from fastapi import FastAPI, Request
+from pymongo import  UpdateOne,UpdateMany
+from fastapi import FastAPI, Request,Query
 
 from api_constants import ApiUrlConstants
 from constants import ERROR_RESPONSE_DICT_FORMAT, CATEGORY_LEVEL_MAPPING, STORE_WH_MAP
@@ -42,6 +43,7 @@ async def product_search(request: Request):
         limit = int(request_data.get("limit")) if request_data.get("limit") else 10
         # DB Query
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
+        print(pipe_line)
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:
@@ -87,7 +89,7 @@ def product_search_v2(request: Request):
     is_group = request_data.get("should_group", "").lower()
     if is_group == 'false':
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
-
+        print(pipe_line)
 
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
@@ -97,6 +99,8 @@ def product_search_v2(request: Request):
         pipe_line = group_autocomplete_stage(
             keyword, store_id, platform, order_type, skip, limit
         )
+        print(pipe_line)
+
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:
@@ -127,35 +131,35 @@ def store_warehouse_map(request: Request):
     return WAREHOUSE_KIRANA_MAP
 
 
-@app.get("/v1/products")
-def filter_product(request: Request):
-    request_data = dict(request.query_params.items())
-    category_ids = request_data.get('category_ids')
-    brand_ids = request_data.get('brand_ids')
-    store_id = request_data.get('store_id')
-    user_id = request_data.get("user_id")
-    order_type = request_data.get("type")
-    platform = request_data.get("platform")
-    skip = int(request_data.get('skip') or 0)
-    limit = int(request_data.get('limit') or 10)
-
-    match_filter = {'store_id': store_id}
-    if category_ids:
-        category_ids = json.loads(category_ids)
-        match_filter['category_id'] = {'$in': category_ids}
-    if brand_ids:
-        brand_ids = json.loads(brand_ids)
-        match_filter['brand_id'] = {'$in': brand_ids}
-
-    LISTING_PIPELINE = listing_pipeline(skip, limit, match_filter)
-
-    response = SHARDED_SEARCH_DB['product_store_sharded'].aggregate(LISTING_PIPELINE).next()
-    response["data"] = (
-        [i.get("id") for i in response["data"]] if response["data"] else []
-    )
-    count = response["total"][0] if response["total"] else {}
-    response["total"] = count.get("count") if count else 0
-    return response
+# @app.get("/v1/products")
+# def filter_product(request: Request):
+#     request_data = dict(request.query_params.items())
+#     category_ids = request_data.get('category_ids')
+#     brand_ids = request_data.get('brand_ids')
+#     store_id = request_data.get('store_id')
+#     user_id = request_data.get("user_id")
+#     order_type = request_data.get("type")
+#     platform = request_data.get("platform")
+#     skip = int(request_data.get('skip') or 0)
+#     limit = int(request_data.get('limit') or 10)
+#
+#     match_filter = {'store_id': store_id}
+#     if category_ids:
+#         category_ids = json.loads(category_ids)
+#         match_filter['category_id'] = {'$in': category_ids}
+#     if brand_ids:
+#         brand_ids = json.loads(brand_ids)
+#         match_filter['brand_id'] = {'$in': brand_ids}
+#
+#     LISTING_PIPELINE = listing_pipeline(skip, limit, match_filter)
+#
+#     response = SHARDED_SEARCH_DB['product_store_sharded'].aggregate(LISTING_PIPELINE).next()
+#     response["data"] = (
+#         [i.get("id") for i in response["data"]] if response["data"] else []
+#     )
+#     count = response["total"][0] if response["total"] else {}
+#     response["total"] = count.get("count") if count else 0
+#     return response
 
 
 @app.post(ApiUrlConstants.V1_PRODUCT_LISTING)
@@ -374,3 +378,6 @@ async def product_listing_v1(request: Request):
                    'response': final_result}
     SHARDED_SEARCH_DB['product_listing_log'].insert_one(log_payload)
     return final_result
+
+
+
