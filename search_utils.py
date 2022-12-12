@@ -53,6 +53,98 @@ class SearchUtils:
                     icon=logo_icon,
                     count=dict_brand_id.get(data.get('id')),
                     type="brand",
-                    filter_key= "brandIds[]",
+                    filter_key="brandIds[]",
                 ))
         return brand_data_to_return
+
+    @classmethod
+    def get_filtered_rs_kg_keyword(cls, keyword=""):
+        keyword = " ".join(
+            list(
+                filter(lambda x: x not in ["rs", "Rs", "RS", "rS", 'kg', 'ml', 'gm'], keyword.split(" "))
+            )
+        )
+        return keyword
+
+    @classmethod
+    def get_group_pipeline_for_store_with_keyword_length_case_should_for_mall(cls, keyword=""):
+        search_terms_len = len(keyword.split(" "))
+        if search_terms_len == 1:
+            search_pipe = [
+                {
+                    "$search": {
+                        "compound": {
+                            "should": [
+                                {
+                                    "text": {
+                                        "query": keyword,
+                                        "path": "name",
+                                    },
+                                },
+                                {
+                                    "text": {
+                                        "query": keyword,
+                                        "path": "barcode",
+                                    },
+                                },
+                            ]
+                        },
+                    }
+                }
+            ]
+        else:
+            keyword = cls.get_filtered_rs_kg_keyword(keyword=keyword)
+            search_pipe = [
+                {
+                    "$search": {
+                        "compound": {
+                            "must": [
+                                {
+                                    "text": {
+                                        "query": keyword,
+                                        "path": "name"
+                                    }
+                                }
+                            ]
+                        }
+
+                    }
+                }
+            ]
+
+        return search_pipe
+
+    @classmethod
+    def get_group_pipeline_for_store_with_keyword_length_case_must_with_should_for_retail(cls, store_id, keyword=""):
+        search_terms_len = len(keyword.split(" "))
+        if search_terms_len == 1:
+            search_pipe = [
+                {
+                    "$search": {
+                        "compound": {
+                            "must": [{"text": {"query": store_id, "path": "store_id"}}],
+                            "should": [
+                                {"text": {"query": keyword, "path": "name"}},
+                                {"text": {"query": keyword, "path": "barcode"}},
+                            ],
+                            "minimumShouldMatch": 1,
+                        }
+                    }
+                }
+            ]
+        else:
+            keyword = cls.get_filtered_rs_kg_keyword(keyword=keyword)
+            search_pipe = [
+                {
+                    "$search": {
+                        "compound": {
+                            "must": [
+                                {"text": {"query": store_id, "path": "store_id"}},
+                                {"text": {"query": keyword, "path": "name"}},
+                            ]
+                        }
+                    }
+                }
+            ]
+
+        return search_pipe
