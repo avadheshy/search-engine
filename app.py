@@ -8,9 +8,9 @@ from fastapi import FastAPI, Request
 
 from api_constants import ApiUrlConstants
 from constants import ERROR_RESPONSE_DICT_FORMAT, CATEGORY_LEVEL_MAPPING, STORE_WH_MAP
-from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline, get_listing_pipeline_for_retail, \
+from pipelines import get_search_pipeline, listing_pipeline, get_listing_pipeline_for_retail, \
     get_listing_pipeline_for_mall, get_brand_and_category_ids_for_retail, get_brand_and_category_ids_for_mall, \
-    get_brand_and_category_pipeline_for_mall
+    get_brand_and_category_pipeline_for_mall, group_pipeline_for_mall, group_pipeline_for_retail
 from settings import SHARDED_SEARCH_DB, loop, ASYNC_SHARDED_SEARCH_DB
 from search_utils import SearchUtils
 
@@ -22,7 +22,7 @@ async def read_main():
     return {"msg": "Hello World"}
 
 
-@app.post("/v1/search")
+@app.post(ApiUrlConstants.V1_PRODUCT_SEARCH)
 async def product_search(request: Request):
     """
     Product Search API, This will help to discover the relevant products
@@ -58,8 +58,8 @@ async def product_search(request: Request):
 
     # ...............REQUEST, RESPONSE, ERROR DB LOG ...................
 
-    SHARDED_SEARCH_DB["search_log_5"].insert_one(
-        {"request": request_data, "response": response, "msg": error_message}
+    SHARDED_SEARCH_DB["search_log_6"].insert_one(
+        {"created_at": datetime.now(), "request": request_data, "response": response, "msg": error_message}
     )
 
     # ...................................................
@@ -67,17 +67,13 @@ async def product_search(request: Request):
     return response
 
 
-@app.get("/v2/search")
+@app.get(ApiUrlConstants.V2_PRODUCT_SEARCH_FOR_GROUP)
 def product_search_v2(request: Request):
     """
     Product Search API, This will help to discover the relevant products
     """
-    # raise HTTPException(status_code=400, detail="Request is not accepted!")
     request_data = dict(request.query_params.items())
-    response = {"total": 0, "data": []}
-    error_message = ""
-    # Request Parsing
-    user_id = request_data.get("user_id")
+
     order_type = request_data.get("type")  # mall / retail
     store_id = request_data.get("store_id")
     keyword = request_data.get("keyword")
@@ -85,20 +81,18 @@ def product_search_v2(request: Request):
     skip = int(request_data.get("skip")) if request_data.get("skip") else 0
     limit = int(request_data.get("limit")) if request_data.get("limit") else 10
     is_group = request_data.get("should_group", "").lower()
-    if is_group == 'false':
+    if is_group == 'false':     # calling v1/search api pipeline here
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
-        if order_type == 'mall':
-            response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
-        else:
-            response = SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipe_line).next()
     else:
-        pipe_line = group_autocomplete_stage(
-            keyword, store_id, platform, order_type, skip, limit
-        )
         if order_type == 'mall':
-            response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
+            pipe_line = group_pipeline_for_mall(keyword, store_id, platform, skip, limit)
         else:
-            response = SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipe_line).next()
+            pipe_line = group_pipeline_for_retail(keyword, store_id, platform, skip, limit)
+
+    if order_type == 'mall':
+        response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
+    else:
+        response = SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipe_line).next()
 
     # Response Formatting
     response["data"] = (
@@ -116,13 +110,13 @@ def product_search_v2(request: Request):
     return response
 
 
-@app.get("/store_map")
+@app.get(ApiUrlConstants.STORE_MAP)
 def store_warehouse_map(request: Request):
     wh_store_map = list(SHARDED_SEARCH_DB['stores'].find({}, {"fulfil_warehouse_id": 1, "id": 1, "_id": 0}))
-    WAREHOUSE_KIRANA_MAP = {}
+    warehouse_kirana_map = {}
     for i in wh_store_map:
-        WAREHOUSE_KIRANA_MAP[i.get('id')] = i.get('fulfil_warehouse_id')
-    return WAREHOUSE_KIRANA_MAP
+        warehouse_kirana_map[i.get('id')] = i.get('fulfil_warehouse_id')
+    return warehouse_kirana_map
 
 
 @app.get("/v1/products")
