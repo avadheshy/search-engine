@@ -214,3 +214,5 @@ def lambda_handler(event, context):
     result, message = sync_product_data()
     print("function ends!")
     return {"status": True}
+
+

@@ -9,9 +9,9 @@ from fastapi import FastAPI, Request,Query
 
 from api_constants import ApiUrlConstants
 from constants import ERROR_RESPONSE_DICT_FORMAT, CATEGORY_LEVEL_MAPPING, STORE_WH_MAP
-from pipelines import get_search_pipeline, group_autocomplete_stage, listing_pipeline, get_listing_pipeline_for_retail, \
+from pipelines import get_search_pipeline, listing_pipeline, get_listing_pipeline_for_retail,\
     get_listing_pipeline_for_mall, get_brand_and_category_ids_for_retail, get_brand_and_category_ids_for_mall, \
-    get_brand_and_category_pipeline_for_mall
+    get_brand_and_category_pipeline_for_mall, group_pipeline_for_mall, group_pipeline_for_retail
 from settings import SHARDED_SEARCH_DB, loop, ASYNC_SHARDED_SEARCH_DB
 from search_utils import SearchUtils
 
@@ -90,20 +90,19 @@ def product_search_v2(request: Request):
     if is_group == 'false':
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
         print(pipe_line)
-
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:
             response = SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipe_line).next()
     else:
-        pipe_line = group_autocomplete_stage(
-            keyword, store_id, platform, order_type, skip, limit
-        )
-        print(pipe_line)
-
         if order_type == 'mall':
+            pipe_line=group_pipeline_for_mall(keyword, store_id, platform, order_type, skip, limit)
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:
+            pipe_line = group_pipeline_for_retail(
+                keyword, store_id, platform, order_type, skip, limit
+            )
+            print(pipe_line)
             response = SHARDED_SEARCH_DB["product_store_sharded"].aggregate(pipe_line).next()
 
     # Response Formatting
