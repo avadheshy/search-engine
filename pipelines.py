@@ -150,13 +150,7 @@ def get_boosting_stage(keyword="", store_id="", platform="pos", order_type="mall
                 'stock': {
                     '$first': '$data.stock'
                 },
-                "new_score": {
-                    "$cond": {
-                        "if": {"$gt": [{'$first': '$data.stock'}, 0]},
-                        "then": {"$add": [{"$meta": "searchScore"}, 10]},
-                        "else": {"$meta": "searchScore"}
-                    }
-                }
+                "new_score": SearchUtils.get_score_boosting_dict(key={'$first': '$data.stock'}, boost_value=10)
             }},
             {"$sort": {"new_score": -1}},
             {
@@ -195,13 +189,7 @@ def get_boosting_stage(keyword="", store_id="", platform="pos", order_type="mall
                     'id': 1,
                     'inv_qty': {"$first": "$store.inv_qty"},
                     '_id': 0,
-                    "new_score": {
-                        "$cond": {
-                            "if": {"$gt": [{"$first": "$store.inv_qty"}, 0]},
-                            "then": {"$add": [{"$meta": "searchScore"}, 10]},
-                            "else": {"$meta": "searchScore"}
-                        }
-                    }
+                    "new_score": SearchUtils.get_score_boosting_dict(key={"$first": "$store.inv_qty"}, boost_value=10)
                 }
             },
             {"$sort": {"new_score": -1}},
@@ -267,13 +255,7 @@ def get_pipeline_from_sharded_collection(keyword="", store_id="", platform="pos"
                 'id': '$product_id',
                 'inv_qty': 1,
                 '_id': 0,
-                "new_score": {
-                    "$cond": {
-                        "if": {"$gt": ["$inv_qty", 0]},
-                        "then": {"$add": [{"$meta": "searchScore"}, 10]},
-                        "else": {"$meta": "searchScore"}
-                    }
-                }
+                "new_score": SearchUtils.get_score_boosting_dict(key="$inv_qty", boost_value=10)
             }},
             {"$sort": {"new_score": -1}},
             {
@@ -301,12 +283,9 @@ def get_pipeline_from_sharded_collection(keyword="", store_id="", platform="pos"
                 }
             },
             {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"},
-                          "new_score": {"$cond": {
-                              "if": {"$gt": [{'$first': '$data.stock'}, 0]},
-                              "then": {"$add": [{"$meta": "searchScore"}, 10]},
-                              "else": {"$meta": "searchScore"}
-                          }
-                          }}},
+                          "new_score": SearchUtils.get_score_boosting_dict(key={"$first": "$data.stock"},
+                                                                           boost_value=10)
+                          }},
             {"$sort": {"new_score": -1}},
             {
                 "$facet": {
@@ -601,13 +580,7 @@ def group_pipeline_for_mall(keyword="", store_id="", platform="pos", skip=0, lim
                 '_id': 0,
                 'group_id': 1,
                 'stock': '$data.stock',
-                "new_score": {
-                    "$cond": {
-                        "if": {"$gt": ['$data.stock', 0]},
-                        "then": {"$add": [{"$meta": "searchScore"}, 10]},
-                        "else": {"$meta": "searchScore"}
-                    }
-                }
+                "new_score": SearchUtils.get_score_boosting_dict(key="$data.stock", boost_value=10)
             }
         }, {
             '$group': {
@@ -675,13 +648,7 @@ def group_pipeline_for_retail(keyword="", store_id="", platform="pos", skip=0, l
                 '_id': 0,
                 'group_id': 1,
                 'inv_qty': 1,
-                "new_score": {
-                    "$cond": {
-                        "if": {"$gt": ['$inv_qty', 0]},
-                        "then": {"$add": [{"$meta": "searchScore"}, 10]},
-                        "else": {"$meta": "searchScore"}
-                    }
-                }
+                "new_score": SearchUtils.get_score_boosting_dict(key="$inv_qty", boost_value=10)
             }
         },
         {
