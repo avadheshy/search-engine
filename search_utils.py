@@ -148,3 +148,14 @@ class SearchUtils:
             ]
 
         return search_pipe
+
+    @classmethod
+    def get_score_boosting_dict(cls, key, boost_value):
+        boost_dict = {
+                    "$cond": {
+                        "if": {"$gt": [key, 0]},
+                        "then": {"$add": [{"$meta": "searchScore"}, boost_value]},
+                        "else": {"$meta": "searchScore"}
+                    }
+                }
+        return boost_dict
