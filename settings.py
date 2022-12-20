@@ -39,3 +39,4 @@ if ENVIRONMENT.lower() in ["prod", "uat"]:
         # We recommend adjusting this value in production,
         traces_sample_rate=1.0,
     )
+IS_PRODUCT_BOOSTING_ON = True if os.getenv('IS_PRODUCT_BOOSTING_ON') == 'True' else False

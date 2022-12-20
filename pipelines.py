@@ -1,7 +1,7 @@
 from constants import STORE_WH_MAP
 from search_utils import SearchUtils
 from settings import SHARDED_SEARCH_DB
-
+from settings import IS_PRODUCT_BOOSTING_ON
 GROUP_ADDITIONAL_STAGE = [
     {
         '$project': {
@@ -81,43 +81,7 @@ def listing_pipeline(skip, limit, match_filter):
 
 
 def get_boosting_stage(keyword="", store_id="", platform="pos", order_type="mall", skip=0, limit=10):
-    search_terms_len = len(keyword.split(" "))
-
-    if search_terms_len == 1:
-        search_pipe = [
-            {
-                "$search": {
-                    "compound": {
-                        "should": [
-                            {
-                                "autocomplete": {
-                                    "query": keyword,
-                                    "path": "name",
-                                },
-                            },
-                            {
-                                "autocomplete": {
-                                    "query": keyword,
-                                    "path": "barcode",
-                                },
-                            },
-                        ],
-                    },
-                }
-            }
-        ]
-    else:
-        keyword = SearchUtils.get_filtered_rs_kg_keyword(keyword=keyword)
-        search_pipe = [
-            {
-                "$search": {
-                    "text": {
-                        "query": keyword,
-                        "path": "name",
-                    },
-                }
-            }
-        ]
+    search_pipe = SearchUtils.get_search_pipeline_for_mall(keyword, IS_PRODUCT_BOOSTING_ON)
     is_mall = "0"
     if order_type == "mall":
         is_mall = "1"
@@ -217,37 +181,7 @@ def get_boosting_stage(keyword="", store_id="", platform="pos", order_type="mall
 
 def get_pipeline_from_sharded_collection(keyword="", store_id="", platform="pos", order_type="retail", skip=0,
                                          limit=10):
-    search_terms_len = len(keyword.split(" "))
-
-    if search_terms_len == 1:
-        search_pipe = [
-            {
-                "$search": {
-                    "compound": {
-                        "must": [{"text": {"query": store_id, "path": "store_id"}}],
-                        "should": [
-                            {"autocomplete": {"query": keyword, "path": "name"}},
-                            {"autocomplete": {"query": keyword, "path": "barcode"}},
-                        ],
-                        "minimumShouldMatch": 1,
-                    }
-                }
-            }
-        ]
-    else:
-        keyword = SearchUtils.get_filtered_rs_kg_keyword(keyword=keyword)
-        search_pipe = [
-            {
-                "$search": {
-                    "compound": {
-                        "must": [
-                            {"text": {"query": store_id, "path": "store_id"}},
-                            {"text": {"query": keyword, "path": "name"}},
-                        ]
-                    }
-                }
-            }
-        ]
+    search_pipe = SearchUtils.get_search_pipeline_for_retail(store_id, keyword, IS_PRODUCT_BOOSTING_ON)
     match_filter = {}
     is_mall = "0"
     if order_type == "mall":
@@ -388,7 +322,7 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
         }
     ]
     if sort_query:
-        pipeline.insert(-3,{'$sort':sort_query})
+        pipeline.insert(-3, {'$sort': sort_query})
     return pipeline
 
 

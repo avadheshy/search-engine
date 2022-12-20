@@ -8,7 +8,7 @@ CATEGORY_LEVEL_MAPPING = {
     "cl1": "1",
     "cl2": "2",
     "cl3": "3",
-    "cl4": "4",
+    "cl4": "4"
 }
 S3_BRAND_URL = "https://s3-ap-south-1.amazonaws.com/niyoos-test/media/brand/"
 S3_CATEGORY_URL = "https://s3-ap-south-1.amazonaws.com/niyoos-test/media/category/"  # TODO Have to change this URL

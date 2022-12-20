@@ -42,6 +42,7 @@ async def product_search(request: Request):
         limit = int(request_data.get("limit")) if request_data.get("limit") else 10
         # DB Query
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
+
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:

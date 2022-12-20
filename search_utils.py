@@ -148,3 +148,121 @@ class SearchUtils:
             ]
 
         return search_pipe
+
+    @classmethod
+    def get_search_pipeline_for_retail(cls, store_id, keyword="", is_boost=False):
+        search_terms_len = len(keyword.split(" "))
+
+        if search_terms_len == 1:
+            SEARCH_PIPE = [
+                {
+                    "$search": {
+                        "compound": {
+                            "must": [{"text": {"query": store_id, "path": "store_id"}}],
+                            "should": [
+                                {"autocomplete": {"query": keyword, "path": "name"}},
+                                {"autocomplete": {"query": keyword, "path": "barcode"}},
+                            ],
+                            "minimumShouldMatch": 1,
+                        }
+                    }
+                }
+            ]
+            if is_boost:
+                SEARCH_PIPE[0]['$search']['compound']['should'].append(
+                    {"text": {"query": '1', "path": "is_boosted", "score": {"constant": {"value": 5}}}})
+        else:
+            keyword = " ".join(
+                list(
+                    filter(
+                        lambda x: x not in ["rs", "Rs", "RS", "rS", "gm", "ml", "kg"],
+                        keyword.split(" "),
+                    )
+                )
+            )
+            SEARCH_PIPE = [
+                {
+                    "$search": {
+                        "compound": {
+                            "must": [
+                                {"text": {"query": store_id, "path": "store_id"}},
+                                {"text": {"query": keyword, "path": "name"}},
+                            ]
+                        }
+                    }
+                }
+            ]
+            if is_boost:
+                SEARCH_PIPE[0]['$search']['compound']['should'] = [
+                    {"text": {"query": '1', "path": "is_boosted", "score": {"constant": {"value": 5}}}}]
+        return SEARCH_PIPE
+
+    @classmethod
+    def get_search_pipeline_for_mall(cls, keyword="", is_boost=False):
+        search_terms_len = len(keyword.split(" "))
+        if search_terms_len == 1:
+            SEARCH_PIPE = [
+                {
+                    "$search": {
+                        "compound": {
+                            "should": [
+                                {
+                                    "autocomplete": {
+                                        "query": keyword,
+                                        "path": "name",
+                                    },
+                                },
+                                {
+                                    "autocomplete": {
+                                        "query": keyword,
+                                        "path": "barcode",
+                                    },
+                                },
+                            ]
+                        },
+                    }
+                }
+            ]
+            if is_boost:
+                SEARCH_PIPE[0]['$search']['compound']['should'].append({
+                    "text": {
+                        'query': '1',
+                        "path": "is_boosted",
+                        "score": {"constant": {"value": 5}}
+                    }
+                })
+            # print(SEARCH_PIPE)
+        else:
+            keyword = " ".join(
+                list(
+                    filter(lambda x: x not in ["rs", "Rs", "RS", "rS", 'kg', 'ml', 'gm'], keyword.split(" "))
+                )
+            )
+            SEARCH_PIPE = [
+                {
+                    "$search": {
+                        "compound": {
+                            "must": [
+                                {
+                                    "text":
+                                        {
+                                            "query": keyword,
+                                            "path": "name"
+                                        }
+                                }
+                            ]
+                        }
+
+                    }
+                }
+            ]
+            if is_boost:
+                SEARCH_PIPE[0]['$search']['compound']['should'] = [{
+                    "text": {
+                        'query': '1',
+                        "path": "is_boosted",
+                        "score": {"constant": {"value": 5}}
+                    }
+                }]
+        return SEARCH_PIPE
+
