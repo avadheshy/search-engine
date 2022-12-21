@@ -19,7 +19,8 @@ def sync_group_sellable_inventory():
     cursor = connection.cursor()
     query = f"SELECT warehouse_id as wh_id, group_id as g_id, product_id as p_id, product_name as name, " \
             f"sum(quantity) as inv_qty FROM niyoweb.group_sellable_inventory where " \
-            f"group_sellable_inventory.created_at >= '{prev_time}' group by wh_id, g_id, p_id"
+            f"group_sellable_inventory.created_at >= '{prev_time}' and group_sellable_inventory.product_name is not Null" \
+            f" group by wh_id, g_id, p_id"
     print(datetime.now(), " :::::: ", query)
     cursor.execute(str(query))
     result = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
