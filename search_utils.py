@@ -60,6 +60,9 @@ class SearchUtils:
 
     @classmethod
     def get_filtered_rs_kg_keyword(cls, keyword=""):
+        if len(keyword) > 1:
+            if keyword[1] == " ":
+                keyword = keyword[2:]
         keyword = " ".join(
             list(
                 filter(lambda x: x not in CURRENCY_AND_MEASUREMENTS_KEYWORDS, keyword.split(" "))
