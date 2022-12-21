@@ -12,6 +12,8 @@ CATEGORY_LEVEL_MAPPING = {
 }
 S3_BRAND_URL = "https://s3-ap-south-1.amazonaws.com/niyoos-test/media/brand/"
 S3_CATEGORY_URL = "https://s3-ap-south-1.amazonaws.com/niyoos-test/media/category/"  # TODO Have to change this URL
+CURRENCY_AND_MEASUREMENTS_KEYWORDS = ["rs", "Rs", "RS", "rS", "gm", "ml", "kg"]
+PRODUCT_BOOST_CONSTANT_VAL = 5
 STORE_WH_MAP = {
     "1": "3",
     "2": "3",

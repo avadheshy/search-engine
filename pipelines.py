@@ -1,87 +1,50 @@
 from constants import STORE_WH_MAP
 from search_utils import SearchUtils
 from settings import SHARDED_SEARCH_DB
-from settings import IS_PRODUCT_BOOSTING_ON
-GROUP_ADDITIONAL_STAGE = [
-    {
-        '$project': {
-            '_id': 0, 'group_id': 1,
-            # 'stock': {"$first": "$data.stock"}
-        }
-    },
-    # {'$sort': {'inv_qty': -1}},
-    {
-        '$group': {
-            '_id': '$group_id',
-            # 'count': {
-            #     '$sum': "$stock"
-            # }
-        }
-    },
-    {
-        '$match': {
-            '_id': {
-                '$ne': None
-            }
-        }
-    },
-    {
-        '$project': {
-            'id': '$_id',
-            '_id': 0,
-            # "count": 1
-        }
-    },
-    # {
-    #     "$sort": {
-    #         "count": -1
-    #     }
-    # }
-]
 
 
 def listing_pipeline(skip, limit, match_filter):
     return [
-    {
-        '$match': match_filter
-    }, {
-        '$project': {
-            '_id': 0, 
-            'group_id': 1
-        }
-    }, {
-        '$group': {
-            '_id': '$group_id', 
-            'count': {
-                '$sum': 1
+        {
+            '$match': match_filter
+        }, {
+            '$project': {
+                '_id': 0,
+                'group_id': 1
+            }
+        }, {
+            '$group': {
+                '_id': '$group_id',
+                'count': {
+                    '$sum': 1
+                }
+            }
+        }, {
+            '$project': {
+                'id': '$_id',
+                '_id': 0
+            }
+        }, {
+            '$facet': {
+                'total': [
+                    {
+                        '$count': 'count'
+                    }
+                ],
+                'data': [
+                    {
+                        '$skip': skip
+                    }, {
+                        '$limit': limit
+                    }
+                ]
             }
         }
-    }, {
-        '$project': {
-            'id': '$_id', 
-            '_id': 0
-        }
-    }, {
-        '$facet': {
-            'total': [
-                {
-                    '$count': 'count'
-                }
-            ], 
-            'data': [
-                {
-                    '$skip': skip
-                }, {
-                    '$limit': limit
-                }
-            ]
-        }
-    }
-]
+    ]
 
 
 def get_boosting_stage(keyword="", store_id="", platform="pos", order_type="mall", skip=0, limit=10):
-    search_pipe = SearchUtils.get_search_pipeline_for_mall(keyword, IS_PRODUCT_BOOSTING_ON)
+    search_pipe = SearchUtils.get_search_pipeline_for_mall(keyword)
     is_mall = "0"
     if order_type == "mall":
         is_mall = "1"
@@ -181,7 +144,7 @@ def get_boosting_stage(keyword="", store_id="", platform="pos", order_type="mall
 
 def get_pipeline_from_sharded_collection(keyword="", store_id="", platform="pos", order_type="retail", skip=0,
                                          limit=10):
-    search_pipe = SearchUtils.get_search_pipeline_for_retail(store_id, keyword, IS_PRODUCT_BOOSTING_ON)
+    search_pipe = SearchUtils.get_search_pipeline_for_retail(store_id, keyword)
     match_filter = {}
     is_mall = "0"
     if order_type == "mall":

@@ -1,4 +1,5 @@
-from constants import S3_BRAND_URL, S3_CATEGORY_URL
+from constants import S3_BRAND_URL, S3_CATEGORY_URL, PRODUCT_BOOST_CONSTANT_VAL, CURRENCY_AND_MEASUREMENTS_KEYWORDS
+from settings import IS_PRODUCT_BOOSTING_ON
 
 
 class SearchUtils:
@@ -61,7 +62,7 @@ class SearchUtils:
     def get_filtered_rs_kg_keyword(cls, keyword=""):
         keyword = " ".join(
             list(
-                filter(lambda x: x not in ["rs", "Rs", "RS", "rS", 'kg', 'ml', 'gm'], keyword.split(" "))
+                filter(lambda x: x not in CURRENCY_AND_MEASUREMENTS_KEYWORDS, keyword.split(" "))
             )
         )
         return keyword
@@ -150,11 +151,11 @@ class SearchUtils:
         return search_pipe
 
     @classmethod
-    def get_search_pipeline_for_retail(cls, store_id, keyword="", is_boost=False):
+    def get_search_pipeline_for_retail(cls, store_id, keyword=""):
         search_terms_len = len(keyword.split(" "))
 
         if search_terms_len == 1:
-            SEARCH_PIPE = [
+            search_pipe = [
                 {
                     "$search": {
                         "compound": {
@@ -168,19 +169,20 @@ class SearchUtils:
                     }
                 }
             ]
-            if is_boost:
-                SEARCH_PIPE[0]['$search']['compound']['should'].append(
-                    {"text": {"query": '1', "path": "is_boosted", "score": {"constant": {"value": 5}}}})
+            if IS_PRODUCT_BOOSTING_ON:
+                search_pipe[0]['$search']['compound']['should'] += [
+                    {"text": {"query": '1', "path": "is_boosted",
+                              "score": {"constant": {"value": PRODUCT_BOOST_CONSTANT_VAL}}}}
+                ]
         else:
             keyword = " ".join(
                 list(
                     filter(
-                        lambda x: x not in ["rs", "Rs", "RS", "rS", "gm", "ml", "kg"],
-                        keyword.split(" "),
+                        lambda x: x not in CURRENCY_AND_MEASUREMENTS_KEYWORDS, keyword.split(" "),
                     )
                 )
             )
-            SEARCH_PIPE = [
+            search_pipe = [
                 {
                     "$search": {
                         "compound": {
@@ -192,16 +194,17 @@ class SearchUtils:
                     }
                 }
             ]
-            if is_boost:
-                SEARCH_PIPE[0]['$search']['compound']['should'] = [
-                    {"text": {"query": '1', "path": "is_boosted", "score": {"constant": {"value": 5}}}}]
-        return SEARCH_PIPE
+            if IS_PRODUCT_BOOSTING_ON:
+                search_pipe[0]['$search']['compound']['should'] = [
+                    {"text": {"query": '1', "path": "is_boosted",
+                              "score": {"constant": {"value": PRODUCT_BOOST_CONSTANT_VAL}}}}]
+        return search_pipe
 
     @classmethod
-    def get_search_pipeline_for_mall(cls, keyword="", is_boost=False):
+    def get_search_pipeline_for_mall(cls, keyword=""):
         search_terms_len = len(keyword.split(" "))
         if search_terms_len == 1:
-            SEARCH_PIPE = [
+            search_pipe = [
                 {
                     "$search": {
                         "compound": {
@@ -223,32 +226,32 @@ class SearchUtils:
                     }
                 }
             ]
-            if is_boost:
-                SEARCH_PIPE[0]['$search']['compound']['should'].append({
-                    "text": {
-                        'query': '1',
-                        "path": "is_boosted",
-                        "score": {"constant": {"value": 5}}
+            if IS_PRODUCT_BOOSTING_ON:
+                search_pipe[0]['$search']['compound']['should'] += [
+                    {
+                        "text": {
+                            'query': '1',
+                            "path": "is_boosted",
+                            "score": {"constant": {"value": PRODUCT_BOOST_CONSTANT_VAL}}
+                        }
                     }
-                })
-            # print(SEARCH_PIPE)
+                ]
         else:
             keyword = " ".join(
                 list(
-                    filter(lambda x: x not in ["rs", "Rs", "RS", "rS", 'kg', 'ml', 'gm'], keyword.split(" "))
+                    filter(lambda x: x not in CURRENCY_AND_MEASUREMENTS_KEYWORDS, keyword.split(" "))
                 )
             )
-            SEARCH_PIPE = [
+            search_pipe = [
                 {
                     "$search": {
                         "compound": {
                             "must": [
                                 {
-                                    "text":
-                                        {
-                                            "query": keyword,
-                                            "path": "name"
-                                        }
+                                    "text": {
+                                        "query": keyword,
+                                        "path": "name"
+                                    }
                                 }
                             ]
                         }
@@ -256,13 +259,13 @@ class SearchUtils:
                     }
                 }
             ]
-            if is_boost:
-                SEARCH_PIPE[0]['$search']['compound']['should'] = [{
+            if IS_PRODUCT_BOOSTING_ON:
+                search_pipe[0]['$search']['compound']['should'] = [{
                     "text": {
                         'query': '1',
                         "path": "is_boosted",
-                        "score": {"constant": {"value": 5}}
+                        "score": {"constant": {"value": PRODUCT_BOOST_CONSTANT_VAL}}
                     }
                 }]
-        return SEARCH_PIPE
+        return search_pipe
 
