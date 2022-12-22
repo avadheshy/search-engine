@@ -434,16 +434,22 @@ async def retail_product_search(request: Request):
             }
         },
         {"$sort": {"new_score": -1}},
-        {"$skip": offset}, {"$limit": limit},
+        {
+            "$facet": {
+                "total": [{"$count": "count"}],
+                "data": [{"$skip": offset}, {"$limit": limit}],
+            }
+        },
         {
             "$project": {
-                "g_id": "$_id"
+                "data": "$data",
+                "count": {"$arrayElemAt": ['$total.count', 0]},
             }
         }
     ]
-    result = list(SHARDED_SEARCH_DB["group_sellable_inventory"].aggregate(pipeline))
-    g_data = [data.get("g_id") for data in result]
-    final_result = {"data": g_data}
+    result = list(SHARDED_SEARCH_DB["group_sellable_inventory"].aggregate(pipeline))[0]
+    g_data = [data.get("_id") for data in result.get("data")]
+    final_result = {"total": result.get("count"), "data": g_data}
 
     log_payload = {"created_at": datetime.now(), "request": request_data, "response": final_result}
     SHARDED_SEARCH_DB["retail_search_log_1"].insert_one(log_payload)
