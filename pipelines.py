@@ -2,122 +2,49 @@ from constants import STORE_WH_MAP
 from search_utils import SearchUtils
 from settings import SHARDED_SEARCH_DB
 
-GROUP_ADDITIONAL_STAGE = [
-    {
-        '$project': {
-            '_id': 0, 'group_id': 1,
-            # 'stock': {"$first": "$data.stock"}
-        }
-    },
-    # {'$sort': {'inv_qty': -1}},
-    {
-        '$group': {
-            '_id': '$group_id',
-            # 'count': {
-            #     '$sum': "$stock"
-            # }
-        }
-    },
-    {
-        '$match': {
-            '_id': {
-                '$ne': None
-            }
-        }
-    },
-    {
-        '$project': {
-            'id': '$_id',
-            '_id': 0,
-            # "count": 1
-        }
-    },
-    # {
-    #     "$sort": {
-    #         "count": -1
-    #     }
-    # }
-]
-
 
 def listing_pipeline(skip, limit, match_filter):
     return [
-    {
-        '$match': match_filter
-    }, {
-        '$project': {
-            '_id': 0, 
-            'group_id': 1
-        }
-    }, {
-        '$group': {
-            '_id': '$group_id', 
-            'count': {
-                '$sum': 1
+        {
+            '$match': match_filter
+        }, {
+            '$project': {
+                '_id': 0,
+                'group_id': 1
+            }
+        }, {
+            '$group': {
+                '_id': '$group_id',
+                'count': {
+                    '$sum': 1
+                }
+            }
+        }, {
+            '$project': {
+                'id': '$_id',
+                '_id': 0
+            }
+        }, {
+            '$facet': {
+                'total': [
+                    {
+                        '$count': 'count'
+                    }
+                ],
+                'data': [
+                    {
+                        '$skip': skip
+                    }, {
+                        '$limit': limit
+                    }
+                ]
             }
         }
-    }, {
-        '$project': {
-            'id': '$_id', 
-            '_id': 0
-        }
-    }, {
-        '$facet': {
-            'total': [
-                {
-                    '$count': 'count'
-                }
-            ], 
-            'data': [
-                {
-                    '$skip': skip
-                }, {
-                    '$limit': limit
-                }
-            ]
-        }
-    }
-]
+    ]
 
 
 def get_boosting_stage(keyword="", store_id="", platform="pos", order_type="mall", skip=0, limit=10):
-    search_terms_len = len(keyword.split(" "))
-
-    if search_terms_len == 1:
-        search_pipe = [
-            {
-                "$search": {
-                    "compound": {
-                        "should": [
-                            {
-                                "autocomplete": {
-                                    "query": keyword,
-                                    "path": "name",
-                                },
-                            },
-                            {
-                                "autocomplete": {
-                                    "query": keyword,
-                                    "path": "barcode",
-                                },
-                            },
-                        ],
-                    },
-                }
-            }
-        ]
-    else:
-        keyword = SearchUtils.get_filtered_rs_kg_keyword(keyword=keyword)
-        search_pipe = [
-            {
-                "$search": {
-                    "text": {
-                        "query": keyword,
-                        "path": "name",
-                    },
-                }
-            }
-        ]
+    search_pipe = SearchUtils.get_search_pipeline_for_mall(keyword)
     is_mall = "0"
     if order_type == "mall":
         is_mall = "1"
@@ -150,7 +77,7 @@ def get_boosting_stage(keyword="", store_id="", platform="pos", order_type="mall
                 'stock': {
                     '$first': '$data.stock'
                 },
-                "new_score": SearchUtils.get_score_boosting_dict(key={'$first': '$data.stock'}, boost_value=10)
+                "new_score": SearchUtils.get_score_boosting_dict(key={'$first': '$data.stock'})
             }},
             {"$sort": {"new_score": -1}},
             {
@@ -189,7 +116,7 @@ def get_boosting_stage(keyword="", store_id="", platform="pos", order_type="mall
                     'id': 1,
                     'inv_qty': {"$first": "$store.inv_qty"},
                     '_id': 0,
-                    "new_score": SearchUtils.get_score_boosting_dict(key={"$first": "$store.inv_qty"}, boost_value=10)
+                    "new_score": SearchUtils.get_score_boosting_dict(key={"$first": "$store.inv_qty"})
                 }
             },
             {"$sort": {"new_score": -1}},
@@ -205,37 +132,7 @@ def get_boosting_stage(keyword="", store_id="", platform="pos", order_type="mall
 
 def get_pipeline_from_sharded_collection(keyword="", store_id="", platform="pos", order_type="retail", skip=0,
                                          limit=10):
-    search_terms_len = len(keyword.split(" "))
-
-    if search_terms_len == 1:
-        search_pipe = [
-            {
-                "$search": {
-                    "compound": {
-                        "must": [{"text": {"query": store_id, "path": "store_id"}}],
-                        "should": [
-                            {"autocomplete": {"query": keyword, "path": "name"}},
-                            {"autocomplete": {"query": keyword, "path": "barcode"}},
-                        ],
-                        "minimumShouldMatch": 1,
-                    }
-                }
-            }
-        ]
-    else:
-        keyword = SearchUtils.get_filtered_rs_kg_keyword(keyword=keyword)
-        search_pipe = [
-            {
-                "$search": {
-                    "compound": {
-                        "must": [
-                            {"text": {"query": store_id, "path": "store_id"}},
-                            {"text": {"query": keyword, "path": "name"}},
-                        ]
-                    }
-                }
-            }
-        ]
+    search_pipe = SearchUtils.get_search_pipeline_for_retail(store_id, keyword)
     match_filter = {}
     is_mall = "0"
     if order_type == "mall":
@@ -255,7 +152,7 @@ def get_pipeline_from_sharded_collection(keyword="", store_id="", platform="pos"
                 'id': '$product_id',
                 'inv_qty': 1,
                 '_id': 0,
-                "new_score": SearchUtils.get_score_boosting_dict(key="$inv_qty", boost_value=10)
+                "new_score": SearchUtils.get_score_boosting_dict(key="$inv_qty")
             }},
             {"$sort": {"new_score": -1}},
             {
@@ -283,8 +180,7 @@ def get_pipeline_from_sharded_collection(keyword="", store_id="", platform="pos"
                 }
             },
             {"$project": {"_id": 0, "id": 1, "stock": {"$first": "$data.stock"},
-                          "new_score": SearchUtils.get_score_boosting_dict(key={"$first": "$data.stock"},
-                                                                           boost_value=10)
+                          "new_score": SearchUtils.get_score_boosting_dict(key={"$first": "$data.stock"})
                           }},
             {"$sort": {"new_score": -1}},
             {
@@ -367,7 +263,7 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
         }
     ]
     if sort_query:
-        pipeline.insert(-3,{'$sort':sort_query})
+        pipeline.insert(-3, {'$sort': sort_query})
     return pipeline
 
 
@@ -580,7 +476,7 @@ def group_pipeline_for_mall(keyword="", store_id="", platform="pos", skip=0, lim
                 '_id': 0,
                 'group_id': 1,
                 'stock': '$data.stock',
-                "new_score": SearchUtils.get_score_boosting_dict(key="$data.stock", boost_value=10)
+                "new_score": SearchUtils.get_score_boosting_dict(key="$data.stock")
             }
         }, {
             '$group': {
@@ -648,7 +544,7 @@ def group_pipeline_for_retail(keyword="", store_id="", platform="pos", skip=0, l
                 '_id': 0,
                 'group_id': 1,
                 'inv_qty': 1,
-                "new_score": SearchUtils.get_score_boosting_dict(key="$inv_qty", boost_value=10)
+                "new_score": SearchUtils.get_score_boosting_dict(key="$inv_qty")
             }
         },
         {

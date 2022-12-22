@@ -43,7 +43,6 @@ async def product_search(request: Request):
         limit = int(request_data.get("limit")) if request_data.get("limit") else 10
         # DB Query
         pipe_line = get_search_pipeline(keyword, store_id, platform, order_type, skip, limit)
-        print(pipe_line)
         if order_type == 'mall':
             response = SHARDED_SEARCH_DB["search_products"].aggregate(pipe_line).next()
         else:
@@ -377,7 +376,7 @@ async def retail_product_search(request: Request):
     def get_typecasted_data(request_data):
         typecasted_data = dict()
         try:
-            typecasted_data["wh_id"] = int(request_data.get("wh_id"))
+            typecasted_data["wh_id"] = str(request_data.get("wh_id"))
             typecasted_data["page"] = int(request_data.get('page')) if request_data.get('page') else None
             typecasted_data["per_page"] = int(request_data.get('per_page')) if request_data.get(
                 'per_page') else None
@@ -398,22 +397,27 @@ async def retail_product_search(request: Request):
                                                                              typecasted_data["per_page"])
     keyword = typecasted_data["keyword"]
     keyword_len = len(typecasted_data["keyword"].split(" "))
-    keyword = keyword if keyword_len == 1 else SearchUtils.get_filtered_rs_kg_keyword(keyword=keyword)
+    if keyword_len == 1:
+        compound_dict = {
+            "must": [{"text": {"query": typecasted_data["wh_id"], "path": "wh_id"}}],
+            "should": [
+                {"autocomplete": {"query": keyword, "path": "name"}},
+            ],
+            "minimumShouldMatch": 1
+        }
+    else:
+        keyword = SearchUtils.get_filtered_rs_kg_keyword(keyword=keyword)
+        compound_dict = {
+            "must": [
+                {"text": {"query": typecasted_data["wh_id"], "path": "wh_id"}},
+                {"text": {"query": keyword, "path": "name"}}
+            ]
+        }
 
     pipeline = [
         {
             "$search": {
-                "compound": {
-                    "must": [
-                        {"text": {"query": keyword, "path": "name"}},
-                    ]
-                }
-            }
-        },
-        {
-            "$match": {
-                "wh_id": typecasted_data["wh_id"],
-                # "inv_qty": {"$gte": 0}
+                "compound": compound_dict
             }
         },
         {

@@ -15,11 +15,13 @@ def sync_group_sellable_inventory():
         host="127.0.0.1",
         user="",
         password="",
+        port=3310
     )
     cursor = connection.cursor()
     query = f"SELECT warehouse_id as wh_id, group_id as g_id, product_id as p_id, product_name as name, " \
             f"sum(quantity) as inv_qty FROM niyoweb.group_sellable_inventory where " \
-            f"group_sellable_inventory.created_at >= '{prev_time}' group by wh_id, g_id, p_id"
+            f"group_sellable_inventory.created_at >= '{prev_time}' and group_sellable_inventory.product_name is not Null" \
+            f" group by wh_id, g_id, p_id"
     print(datetime.now(), " :::::: ", query)
     cursor.execute(str(query))
     result = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
@@ -28,7 +30,7 @@ def sync_group_sellable_inventory():
         payload_list = []
         for product in result:
             payload = {
-                "wh_id": int(product.get("wh_id")),
+                "wh_id": str(product.get("wh_id")),
                 "g_id": product.get("g_id"),
                 "p_id": product.get("p_id"),
                 "name": product.get("name", "").strip(),
