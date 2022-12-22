@@ -15,6 +15,7 @@ def sync_group_sellable_inventory():
         host="127.0.0.1",
         user="",
         password="",
+        port=3310
     )
     cursor = connection.cursor()
     query = f"SELECT warehouse_id as wh_id, group_id as g_id, product_id as p_id, product_name as name, " \
@@ -29,7 +30,7 @@ def sync_group_sellable_inventory():
         payload_list = []
         for product in result:
             payload = {
-                "wh_id": int(product.get("wh_id")),
+                "wh_id": str(product.get("wh_id")),
                 "g_id": product.get("g_id"),
                 "p_id": product.get("p_id"),
                 "name": product.get("name", "").strip(),
