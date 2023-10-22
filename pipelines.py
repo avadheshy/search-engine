@@ -252,7 +252,30 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
                         '$count': 'count'
                     }
                 ],
+<<<<<<< HEAD
+                'data': [
+                    {
+                        '$skip': offset
+                    },
+                    {
+                        '$limit': limit
+                    }
+                ]
+||||||| 0c653b4
+                'data': [
+                    {
+                        "$sort": sort_query
+                    },
+                    {
+                        '$skip': offset
+                    },
+                    {
+                        '$limit': limit
+                    }
+                ]
+=======
                 'data': data_array
+>>>>>>> 20881d4fec90bad72d702b70b0b31843f2ec0903
             }
         },
         {
@@ -262,8 +285,14 @@ def get_listing_pipeline_for_retail(filter_kwargs, sort_query, offset, limit):
             }
         }
     ]
+<<<<<<< HEAD
+    if sort_query:
+        pipeline[-3]=sort_query
+||||||| 0c653b4
+=======
     if sort_query:
         pipeline.insert(-3, {'$sort': sort_query})
+>>>>>>> 20881d4fec90bad72d702b70b0b31843f2ec0903
     return pipeline
 
 
@@ -363,6 +392,12 @@ def get_listing_pipeline_for_mall(warehouse_id, filter_kwargs_for_mall, sort_que
                     "$toInt": "$_id"
                 },
                 "brand_id": "$brand_id",
+<<<<<<< HEAD
+                "category_id": "$category_id",
+                "cl2_id": "$cl2_id"
+||||||| 0c653b4
+                "category_id": "$category_id"
+=======
                 "category_id": "$category_id",
                 "cl2_id": "$cl2_id"
             }
@@ -433,6 +468,7 @@ def get_brand_and_category_pipeline_for_mall(filter_kwargs, warehouse_id):
                 "_id": 0,
                 "brand_id": "$brand_id",
                 "category_id": "$category_id"
+>>>>>>> 20881d4fec90bad72d702b70b0b31843f2ec0903
             }
         }
     ]
@@ -593,12 +629,34 @@ def group_pipeline_for_retail(keyword="", store_id="", platform="pos", skip=0, l
                 ],
                 'data': [
                     {
+<<<<<<< HEAD
+                        '$skip': offset
+                    },
+                    {
+||||||| 0c653b4
+                        '$sort': sort_query
+                    },
+                    {
+                        '$skip': offset
+                    },
+                    {
+=======
                         '$skip': skip
                     }, {
+>>>>>>> 20881d4fec90bad72d702b70b0b31843f2ec0903
                         '$limit': limit
                     }
                 ]
             }
         }
     ]
+<<<<<<< HEAD
+    if sort_query:
+        pipeline[-3]=sort_query
+
+||||||| 0c653b4
+
+=======
+>>>>>>> 20881d4fec90bad72d702b70b0b31843f2ec0903
     return pipeline
+

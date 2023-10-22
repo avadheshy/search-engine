@@ -164,6 +164,31 @@ async def product_listing_v1(request: Request):
             typecasted_data["page"] = int(request_data.get('page')) if request_data.get('page') else 1
             typecasted_data["per_page"] = int(request_data.get('per_page')) if request_data.get(
                 'per_page') else 15
+<<<<<<< HEAD
+            typcasted_data["filters_for"] = request_data.get("filters_for")
+            typcasted_data["filter_id"] = int(request_data.get("filter_id"))
+            typcasted_data["sort_by"] = request_data.get("sort_by") if request_data.get("sort_by") else None
+            typcasted_data["type"] = request_data.get("type")
+            if isinstance(request_data.get("brandIds"), list):
+                typcasted_data["brandIds"] = list(map(int, request_data.get("brandIds")))
+            if isinstance(request_data.get("categories"), list):
+                typcasted_data["categories"] = list(map(int, request_data.get("categories")))
+        except Exception as error:
+            typcasted_data["error_msg"] = f"{error}"
+        return typcasted_data
+||||||| 0c653b4
+            typcasted_data["filters_for"] = request_data.get("filters_for")
+            typcasted_data["filter_id"] = int(request_data.get("filter_id"))
+            typcasted_data["sort_by"] = request_data.get("sort_by")
+            typcasted_data["type"] = request_data.get("type")
+            if isinstance(request_data.get("brandIds"), list):
+                typcasted_data["brandIds"] = list(map(int, request_data.get("brandIds")))
+            if isinstance(request_data.get("categories"), list):
+                typcasted_data["categories"] = list(map(int, request_data.get("categories")))
+        except Exception as error:
+            typcasted_data["error_msg"] = f"{error}"
+        return typcasted_data
+=======
             typecasted_data["filters_for"] = request_data.get("filters_for")
             typecasted_data["filter_id"] = int(request_data.get("filter_id"))
             typecasted_data["sort_by"] = request_data.get("sort_by") if request_data.get("sort_by") else None
@@ -171,7 +196,19 @@ async def product_listing_v1(request: Request):
             if isinstance(request_data.get("brandIds"), dict):
                 typecasted_data["brandIds"] = list(map(int, request_data.get("brandIds").values())) if request_data.get(
                     "brandIds") else None
+>>>>>>> 20881d4fec90bad72d702b70b0b31843f2ec0903
 
+<<<<<<< HEAD
+    typcasted_data = get_typcasted_data(request_data)
+    if typcasted_data.get("error_msg"):
+        error_response_dict["message"] = typcasted_data.get("error_msg")
+        return error_response_dict
+    
+    sort_by = typcasted_data.get("sort_by")
+||||||| 0c653b4
+    typcasted_data = get_typcasted_data(request_data)
+    sort_by = typcasted_data.get("sort_by")
+=======
             if isinstance(request_data.get("categories"), dict):
                 typecasted_data["categories"] = list(
                     map(int, request_data.get("categories").values())) if request_data.get("categories") else None
@@ -184,13 +221,29 @@ async def product_listing_v1(request: Request):
         error_response_dict["message"] = typecasted_data.get("error_msg")
         return error_response_dict
     sort_by = typecasted_data.get("sort_by")
+>>>>>>> 20881d4fec90bad72d702b70b0b31843f2ec0903
     offset = 0
     limit = 15
+<<<<<<< HEAD
+    if typcasted_data["page"] and typcasted_data["per_page"]:
+        offset = (typcasted_data["page"] - 1) * typcasted_data["per_page"]
+        limit = typcasted_data["per_page"]
+    if typcasted_data.get("type") not in ["mall", "retail"]:
+||||||| 0c653b4
+    if typcasted_data["page"] and typcasted_data["per_page"]:
+        offset = (typcasted_data["page"] - 1) * typcasted_data["per_page"]
+        limit = typcasted_data["per_page"]
+    if typcasted_data.get("error_msg"):
+        error_response_dict["message"] = typcasted_data.get("error_msg")
+        return error_response_dict
+    if typcasted_data.get("type") not in ["mall", "retail"]:
+=======
 
     if typecasted_data["page"] and typecasted_data["per_page"]:
         offset = (typecasted_data["page"] - 1) * typecasted_data["per_page"]
         limit = typecasted_data["per_page"]
     if typecasted_data.get("type") not in ["mall", "retail"]:
+>>>>>>> 20881d4fec90bad72d702b70b0b31843f2ec0903
         error_response_dict["message"] = "Invalid type"
         return error_response_dict
     if typecasted_data.get("filters_for") not in ["brand", "category", "tag", "group", "cl1",
@@ -309,9 +362,21 @@ async def product_listing_v1(request: Request):
 
     data_to_return = data[0].get("data")
     num_found = data[0].get("numFound") or 0
+<<<<<<< HEAD
+    brand_ids = list(set([str(product.get('brand_id')) for product in data_to_return if product.get('brand_id')]))
+    category_ids = list(set([str(product.get('category_id')) for product in data_to_return if product.get('category_id')]))
+    print(brand_ids)
+    print(category_ids)
+||||||| 0c653b4
+    brand_ids = list(set([str(product.get('brand_id')) for product in data_to_return]))
+    category_ids = list(set([str(product.get('category_id')) for product in data_to_return]))
+    print(brand_ids)
+    print(category_ids)
+=======
 
     dict_brand_ids = Counter(brand_ids)
     dict_category_ids = Counter(category_ids)
+>>>>>>> 20881d4fec90bad72d702b70b0b31843f2ec0903
     brand_filter = {
         "id": {"$in": brand_ids}
     }
@@ -326,6 +391,12 @@ async def product_listing_v1(request: Request):
         brand_data = list(SHARDED_SEARCH_DB["brands"].find(brand_filter, brand_projection)) or []
     if only_category_data:
         category_data = list(SHARDED_SEARCH_DB["all_categories"].find(category_filter, category_projection)) or []
+<<<<<<< HEAD
+        # print("Hye : ", category_data)
+||||||| 0c653b4
+        print("Hye : ", category_data)
+=======
+>>>>>>> 20881d4fec90bad72d702b70b0b31843f2ec0903
     if both_brand_and_category_data:
         brand_data = list(SHARDED_SEARCH_DB["brands"].find(brand_filter, brand_projection)) or []
         category_data = list(SHARDED_SEARCH_DB["all_categories"].find(category_filter, category_projection)) or []
