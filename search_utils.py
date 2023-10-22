@@ -1,4 +1,5 @@
-from constants import S3_BRAND_URL
+from constants import S3_BRAND_URL, S3_CATEGORY_URL, PRODUCT_BOOST_CONSTANT_VAL, CURRENCY_AND_MEASUREMENTS_KEYWORDS
+from settings import IS_PRODUCT_BOOSTING_ON
 
 
 class SearchUtils:
@@ -22,23 +23,24 @@ class SearchUtils:
         return array_with_count
 
     @classmethod
-    def make_category_data(cls, category_data):
+    def make_category_data(cls, category_data, dict_category_id, category_ids_input):
         category_data_to_return = None
         if category_data:
             category_data_to_return = []
             for data in category_data:
-                logo_icon = f"category_url/{data.get('id')}/{data.get('logo')}" if data.get('logo') else None
+                logo_icon = f"{S3_CATEGORY_URL}{data.get('id')}/{data.get('icon')}" if data.get('icon') else None
                 category_data_to_return.append(dict(
                     id=data.get('id'),
                     name=data.get('name'),
+                    active=True if int(data.get('id')) in category_ids_input else False,
                     logo=logo_icon,
                     icon=logo_icon,
-                    type="category"
+                    count=dict_category_id.get(data.get('id')) 
                 ))
         return category_data_to_return
 
     @classmethod
-    def make_brand_data(cls, brand_data):
+    def make_brand_data(cls, brand_data, dict_brand_id, brand_ids_input):
         brand_data_to_return = None
         if brand_data:
             brand_data_to_return = []
@@ -47,8 +49,216 @@ class SearchUtils:
                 brand_data_to_return.append(dict(
                     id=data.get('id'),
                     name=data.get('name'),
+                    active=True if int(data.get('id')) in brand_ids_input else False,
                     logo=logo_icon,
                     icon=logo_icon,
-                    type="brand"
+                    count=dict_brand_id.get(data.get('id')),
+                    type="brand",
+                    filter_key="brandIds[]",
                 ))
         return brand_data_to_return
+
+    @classmethod
+    def get_filtered_rs_kg_keyword(cls, keyword=""):
+        if len(keyword) > 1:
+            if keyword[1] == " ":
+                keyword = keyword[2:]
+        keyword = " ".join(
+            list(
+                filter(lambda x: x not in CURRENCY_AND_MEASUREMENTS_KEYWORDS, keyword.split(" "))
+            )
+        )
+        return keyword
+
+    @classmethod
+    def get_group_pipeline_for_store_with_keyword_length_case_should_for_mall(cls, keyword=""):
+        search_terms_len = len(keyword.split(" "))
+        if search_terms_len == 1:
+            search_pipe = [
+                {
+                    "$search": {
+                        "compound": {
+                            "should": [
+                                {
+                                    "text": {
+                                        "query": keyword,
+                                        "path": "name",
+                                    },
+                                },
+                                {
+                                    "text": {
+                                        "query": keyword,
+                                        "path": "barcode",
+                                    },
+                                },
+                            ]
+                        },
+                    }
+                }
+            ]
+        else:
+            keyword = cls.get_filtered_rs_kg_keyword(keyword=keyword)
+            search_pipe = [
+                {
+                    "$search": {
+                        "compound": {
+                            "must": [
+                                {
+                                    "text": {
+                                        "query": keyword,
+                                        "path": "name"
+                                    }
+                                }
+                            ]
+                        }
+
+                    }
+                }
+            ]
+
+        return search_pipe
+
+    @classmethod
+    def get_group_pipeline_for_store_with_keyword_length_case_must_with_should_for_retail(cls, store_id, keyword=""):
+        search_terms_len = len(keyword.split(" "))
+        if search_terms_len == 1:
+            search_pipe = [
+                {
+                    "$search": {
+                        "compound": {
+                            "must": [{"text": {"query": store_id, "path": "store_id"}}],
+                            "should": [
+                                {"text": {"query": keyword, "path": "name"}},
+                                {"text": {"query": keyword, "path": "barcode"}},
+                            ],
+                            "minimumShouldMatch": 1,
+                        }
+                    }
+                }
+            ]
+        else:
+            keyword = cls.get_filtered_rs_kg_keyword(keyword=keyword)
+            search_pipe = [
+                {
+                    "$search": {
+                        "compound": {
+                            "must": [
+                                {"text": {"query": store_id, "path": "store_id"}},
+                                {"text": {"query": keyword, "path": "name"}},
+                            ]
+                        }
+                    }
+                }
+            ]
+
+        return search_pipe
+
+    @classmethod
+    def get_score_boosting_dict(cls, key, boost_value=10):
+        boost_dict = {
+                    "$cond": {
+                        "if": {"$gt": [key, 0]},
+                        "then": {"$add": [{"$meta": "searchScore"}, boost_value]},
+                        "else": {"$meta": "searchScore"}
+                    }
+                }
+        return boost_dict
+
+    @classmethod
+    def get_score_boosting_dict_based_on_particular_key(cls, key="is_boosted", value="1",
+                                                        boost_value=PRODUCT_BOOST_CONSTANT_VAL):
+        boost_dict = {"text": {"query": value, "path": key, "score": {"constant": {"value": boost_value}}}}
+        return boost_dict
+
+    @classmethod
+    def get_search_pipeline_for_retail(cls, store_id, keyword=""):
+        search_terms_len = len(keyword.split(" "))
+        if search_terms_len == 1:
+            search_pipe = [
+                {
+                    "$search": {
+                        "compound": {
+                            "must": [{"text": {"query": store_id, "path": "store_id"}}],
+                            "should": [
+                                {"autocomplete": {"query": keyword, "path": "name"}},
+                                {"autocomplete": {"query": keyword, "path": "barcode"}},
+                            ],
+                            "minimumShouldMatch": 1,
+                        }
+                    }
+                }
+            ]
+            if IS_PRODUCT_BOOSTING_ON:
+                search_pipe[0]['$search']['compound']['should'] += [
+                    cls.get_score_boosting_dict_based_on_particular_key()]
+        else:
+            keyword = cls.get_filtered_rs_kg_keyword(keyword=keyword)
+            search_pipe = [
+                {
+                    "$search": {
+                        "compound": {
+                            "must": [
+                                {"text": {"query": store_id, "path": "store_id"}},
+                                {"text": {"query": keyword, "path": "name"}},
+                            ]
+                        }
+                    }
+                }
+            ]
+            if IS_PRODUCT_BOOSTING_ON:
+                search_pipe[0]['$search']['compound']['should'] = [
+                    cls.get_score_boosting_dict_based_on_particular_key()]
+        return search_pipe
+
+    @classmethod
+    def get_search_pipeline_for_mall(cls, keyword=""):
+        search_terms_len = len(keyword.split(" "))
+        if search_terms_len == 1:
+            search_pipe = [
+                {
+                    "$search": {
+                        "compound": {
+                            "should": [
+                                {
+                                    "autocomplete": {
+                                        "query": keyword,
+                                        "path": "name",
+                                    },
+                                },
+                                {
+                                    "autocomplete": {
+                                        "query": keyword,
+                                        "path": "barcode",
+                                    },
+                                },
+                            ]
+                        },
+                    }
+                }
+            ]
+            if IS_PRODUCT_BOOSTING_ON:
+                search_pipe[0]['$search']['compound']['should'] += [
+                    cls.get_score_boosting_dict_based_on_particular_key()]
+        else:
+            keyword = cls.get_filtered_rs_kg_keyword(keyword=keyword)
+            search_pipe = [
+                {
+                    "$search": {
+                        "compound": {
+                            "must": [
+                                {
+                                    "text": {
+                                        "query": keyword,
+                                        "path": "name"
+                                    }
+                                }
+                            ]
+                        }
+
+                    }
+                }
+            ]
+            if IS_PRODUCT_BOOSTING_ON:
+                search_pipe[0]['$search']['compound']['should'] = [
+                    cls.get_score_boosting_dict_based_on_particular_key()]
+        return search_pipe
